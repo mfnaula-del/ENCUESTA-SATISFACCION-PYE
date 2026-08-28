@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Encuesta de satisfacción</title>
+<style>
+:root{
+  --papel:#F5F4F0; --carta:#FFFFFF; --tinta:#1A1D1A;
+  --oliva:#3F4A3C; --linea:#E2E0DA; --apagado:#7A7C75;
+  --senal:#9B2C1F; --ambar:#B8860B;
+  --sans:-apple-system,'Segoe UI',system-ui,sans-serif;
+  --mono:'SF Mono',Menlo,monospace;
+}
+body{font-family:var(--sans);background:var(--papel);color:var(--tinta);
+  padding:20px 16px;line-height:1.5}
+.envoltura{max-width:600px;margin:0 auto}
+.carta{background:var(--carta);border:1px solid var(--linea);
+  border-radius:12px;padding:16px}
+.btn{width:100%;padding:14px;border:0;border-radius:10px;font-size:15px;
+  font-weight:600;font-family:inherit;cursor:pointer;margin-top:10px}
+.btn-enviar{background:var(--oliva);color:#fff}
+.btn-atras{background:#fff;color:var(--oliva);border:1px solid var(--linea)}
+.btn[disabled]{opacity:.6;cursor:default}
+.aviso{border-radius:9px;padding:12px 13px;margin-top:11px;font-size:13px;line-height:1.5}
+.aviso b{display:block;margin-bottom:4px}
+.aviso.ok{background:#E3EFE0;color:#2C351F}
+.aviso.error{background:#FBEBE8;color:#7B241A}
+.aviso.neutro{background:#FDF3E3;color:#5C4210}
+
+.pasos{display:flex;gap:6px;justify-content:center;margin-bottom:14px}
+.paso{width:8px;height:8px;border-radius:50%;background:var(--linea)}
+.paso.activo{background:var(--oliva)}
+.paso.hecho{background:#9CAF97}
+
+.titulo-pantalla{font-size:18px;font-weight:700;margin-bottom:2px}
+.subtitulo{font-size:13px;color:var(--apagado);margin-bottom:16px}
+.quien-pie{font-size:12px;color:var(--apagado);text-align:center;margin-top:14px}
+
+.etiqueta{display:block;font-size:13px;font-weight:600;color:var(--oliva);margin:14px 0 6px}
+.etiqueta:first-child{margin-top:0}
+.campo input[type=text], .campo input[type=number], .campo input[type=date],
+.campo select, .campo textarea{
+  width:100%;padding:11px 12px;border:1px solid var(--linea);border-radius:8px;
+  font-family:inherit;font-size:15px;color:var(--tinta);background:#fff;box-sizing:border-box}
+.campo textarea{min-height:70px;resize:vertical}
+
+.pregunta{margin-bottom:18px;padding-bottom:16px;border-bottom:1px solid var(--linea)}
+.pregunta:last-child{border-bottom:0;margin-bottom:0;padding-bottom:0}
+.pregunta-texto{font-size:15px;font-weight:600;margin-bottom:10px;line-height:1.4}
+.opciones{display:flex;flex-direction:column;gap:8px}
+.opcion{display:flex;align-items:center;gap:9px;padding:10px 12px;border:1px solid var(--linea);
+  border-radius:8px;cursor:pointer;font-size:14px}
+.opcion input{margin:0;flex-shrink:0}
+.condicional{margin-top:10px;margin-left:2px;padding-left:12px;border-left:3px solid var(--linea)}
+.condicional .etiqueta{margin-top:0}
+
+.fila-botones{display:flex;gap:10px}
+.fila-botones .btn{margin-top:14px}
+</style>
+</head>
+<body>
+<div class="envoltura">
+  <div class="carta" id="contenido"><p>Cargando…</p></div>
+</div>
+
+<script>
+const URL_BACKEND = 'https://script.google.com/macros/s/AKfycbwPONOVUJ4TKYJbowP9tlOeYWSyrpHYeFaZNgAd6rLousFVsCZVBXzyi-sMiBPRKyin/exec';
+
+function parametro(nombre){ return new URLSearchParams(location.search).get(nombre); }
+const PROF = (parametro('prof') || '').toUpperCase();
+
+const esc = s => String(s ?? '').replace(/[&<>"]/g,
+  c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+async function pedir(datos){
+  const cuerpo = new URLSearchParams();
+  Object.keys(datos).forEach(function (k) { cuerpo.append(k, datos[k]); });
+  const r = await fetch(URL_BACKEND, { method: 'POST', body: cuerpo });
+  const d = await r.json();
+  if (!d.exito && d.error) throw new Error(d.error);
+  return d;
+}
+
+// ---------------------------------------------------------------- lógica
+// (idéntica a la ya probada por separado con Node antes de incrustarla aquí)
+
+function debeAparecer(condicional, respuestas) {
+  return (condicional.aplicaSi || []).indexOf(respuestas[condicional.dependeDe]) !== -1;
+}
+function condicionalesVisibles(pregunta, respuestas) {
+  return (pregunta.condicionales || []).filter(function (c) { return debeAparecer(c, respuestas); });
+}
+function limpiarOcultas(preguntas, respuestas) {
+  preguntas.forEach(function (p) {
+    (p.condicionales || []).forEach(function (c) {
+      if (!debeAparecer(c, respuestas)) respuestas[c.id] = '';
+    });
+  });
+}
+function codigosDe(preguntas) {
+  const out = [];
+  preguntas.forEach(function (p) {
+    out.push(p.id);
+    (p.condicionales || []).forEach(function (c) { out.push(c.id); });
+  });
+  return out;
+}
+function respuestasIniciales(preguntas) {
+  const r = {};
+  codigosDe(preguntas).forEach(function (c) { r[c] = ''; });
+  return r;
+}
+function validarIdentificacion(id) {
+  if (!String(id.documento || '').trim()) return 'Falta el número de documento.';
+  if (!String(id.nombres || '').trim()) return 'Falta el nombre del beneficiario.';
+  return '';
+}
+function validarPreguntasElemento(preguntas, elemento, respuestas) {
+  const deEsteElemento = preguntas.filter(function (p) { return p.elemento === elemento; });
+  for (let i = 0; i < deEsteElemento.length; i++) {
+    if (!String(respuestas[deEsteElemento[i].id] || '').trim())
+      return 'Falta responder: ' + deEsteElemento[i].texto;
+  }
+  return '';
+}
+function construirPayload(datos) {
+  const payload = {
+    accion: 'guardarEncuesta', encuestador: datos.prof, fecha: datos.fecha, lugar: datos.lugar,
+    identificacion: JSON.stringify(datos.identificacion), respuestas: JSON.stringify(datos.respuestas),
+    comentario: datos.comentario
+  };
+  if (datos.rehacer) payload.rehacer = 'si';
+  return payload;
+}
+
+// ---------------------------------------------------------------- estado
+
+const ELEMENTOS_ORDEN = ['SDH', 'MEA', 'ACC', 'PEM'];
+const NOMBRE_ELEMENTO = {
+  SDH: 'Seguridad y trato digno', MEA: 'Satisfacción y acceso',
+  ACC: 'Quejas y sugerencias', PEM: 'Participación e información'
+};
+const NOMBRE_LOCALIDAD_A_CATALOGO = {
+  MB: { provincia: 'MANABI', canton: 'MANTA' },
+  G:  { provincia: 'GUAYAS', canton: 'GUAYAQUIL' },
+  M:  { provincia: 'GUAYAS', canton: 'MILAGRO' }
+};
+
+let PREGUNTAS = [];
+let QUIEN = null;
+let pantallaActual = 0;   // 0 identificación · 1-4 elementos · 5 comentario
+let estado = {
+  fecha: new Date().toISOString().slice(0, 10),
+  lugar: '',
+  identificacion: { pais: 'ECUADOR', provincia: '', canton: '', nombres: '', documento: '',
+                     celular: '', grupoEtnico: '', edad: '', rangoEdad: '', sexo: '', discapacidad: '' },
+  respuestas: {},
+  comentario: ''
+};
+let avisoActual = null;
+let modoReemplazo = false;   // true solo cuando ya se detectó un documento duplicado y la persona confirmó reemplazarlo
+
+// ---------------------------------------------------------------- arranque
+
+async function arrancar(){
+  const cont = document.getElementById('contenido');
+  if (!PROF) {
+    cont.innerHTML = '<div class="titulo-pantalla">Enlace incompleto</div>'
+      + '<div class="aviso error">Este enlace no trae quién eres. Vuelve a abrirlo desde tu enlace personal.</div>';
+    return;
+  }
+  try {
+    const [datosGet, datosItems] = await Promise.all([
+      fetch(URL_BACKEND).then(function (r) { return r.json(); }),
+      pedir({ accion: 'itemsEncuesta' })
+    ]);
+    if (!datosGet.ok || !datosItems.exito) throw new Error('El backend no respondió correctamente.');
+    QUIEN = datosGet.encuestadores[PROF];
+    if (!QUIEN) throw new Error('El código "' + PROF + '" no corresponde a ningún encuestador.');
+    PREGUNTAS = datosItems.preguntas;
+    estado.respuestas = respuestasIniciales(PREGUNTAS);
+    const catalogo = NOMBRE_LOCALIDAD_A_CATALOGO[QUIEN.loc];
+    if (catalogo) { estado.identificacion.provincia = catalogo.provincia; estado.identificacion.canton = catalogo.canton; }
+    render();
+  } catch (err) {
+    cont.innerHTML = '<div class="titulo-pantalla">No se pudo cargar la encuesta</div>'
+      + '<div class="aviso error">' + esc(err.message) + '</div>';
+  }
+}
+
+// ---------------------------------------------------------------- render
+
+function render(){
+  const cont = document.getElementById('contenido');
+  cont.innerHTML = dibujarPasos() + dibujarAviso() + dibujarPantalla() + dibujarPie();
+  cablearEventos();
+  window.scrollTo(0, 0);
+}
+
+function dibujarPasos(){
+  let html = '<div class="pasos">';
+  for (let i = 0; i < 6; i++) {
+    const clase = i === pantallaActual ? 'activo' : (i < pantallaActual ? 'hecho' : '');
+    html += '<div class="paso ' + clase + '"></div>';
+  }
+  return html + '</div>';
+}
+
+function dibujarAviso(){
+  if (!avisoActual) return '';
+  return '<div class="aviso ' + avisoActual.tipo + '"><b>' + esc(avisoActual.titulo) + '</b>' + esc(avisoActual.texto) + '</div>';
+}
+
+function dibujarPie(){
+  if (!QUIEN) return '';
+  return '<p class="quien-pie">' + esc(QUIEN.nombre) + ' · ' + esc(QUIEN.rol) + '</p>';
+}
+
+function dibujarPantalla(){
+  if (pantallaActual === 0) return dibujarIdentificacion();
+  if (pantallaActual >= 1 && pantallaActual <= 4) return dibujarElemento(ELEMENTOS_ORDEN[pantallaActual - 1]);
+  return dibujarComentario();
+}
+
+function campoTexto(tipo, campo, etiqueta, valor, opts){
+  opts = opts || {};
+  const tag = opts.tipo || 'text';
+  return '<label class="campo"><span class="etiqueta">' + esc(etiqueta) + '</span>'
+    + '<input type="' + tag + '" data-tipo="' + tipo + '" data-campo="' + campo + '" value="' + esc(valor) + '"></label>';
+}
+function campoSelect(tipo, campo, etiqueta, valor, opciones){
+  let html = '<label class="campo"><span class="etiqueta">' + esc(etiqueta) + '</span><select data-tipo="' + tipo + '" data-campo="' + campo + '">';
+  html += '<option value="">Selecciona…</option>';
+  opciones.forEach(function (o) { html += '<option value="' + esc(o) + '"' + (o === valor ? ' selected' : '') + '>' + esc(o) + '</option>'; });
+  return html + '</select></label>';
+}
+
+function dibujarIdentificacion(){
+  const id = estado.identificacion;
+  let html = '<div class="titulo-pantalla">Identificación</div>'
+    + '<p class="subtitulo">Datos de la persona que responde la encuesta.</p>';
+  html += campoTexto('meta', 'fecha', 'Fecha de aplicación', estado.fecha, { tipo: 'date' });
+  html += campoTexto('meta', 'lugar', 'Lugar', estado.lugar);
+  html += campoTexto('identificacion', 'nombres', 'Nombres y apellidos', id.nombres);
+  html += campoTexto('identificacion', 'documento', 'Número de documento de identidad', id.documento);
+  html += campoTexto('identificacion', 'celular', 'Número de celular', id.celular);
+  html += campoTexto('identificacion', 'provincia', 'Provincia', id.provincia);
+  html += campoTexto('identificacion', 'canton', 'Cantón', id.canton);
+  html += campoSelect('identificacion', 'grupoEtnico', 'Grupo étnico', id.grupoEtnico,
+    ['MESTIZO', 'INDIGENA', 'AFROECUATORIANO', 'MONTUBIO', 'BLANCO', 'OTRO']);
+  html += campoTexto('identificacion', 'edad', 'Edad', id.edad, { tipo: 'number' });
+  html += campoSelect('identificacion', 'rangoEdad', 'Rango de edad', id.rangoEdad,
+    ['DE 5 A 17', 'DE 18 A 49', 'DE 50 Y MAS']);
+  html += campoSelect('identificacion', 'sexo', 'Sexo (atribuido de nacimiento)', id.sexo, ['FEMENINO', 'MASCULINO']);
+  html += campoSelect('identificacion', 'discapacidad', 'Tiene alguna condición de discapacidad', id.discapacidad, ['SI', 'NO']);
+  html += '<div class="fila-botones"><button class="btn btn-enviar" id="btn-siguiente">Siguiente</button></div>';
+  return html;
+}
+
+function dibujarPreguntaAncla(p){
+  const seleccionada = estado.respuestas[p.id];
+  let html = '<div class="pregunta"><div class="pregunta-texto">' + esc(p.texto) + '</div><div class="opciones">';
+  p.escala.forEach(function (op, i) {
+    const marcada = op === seleccionada;
+    html += '<label class="opcion' + (marcada ? ' marcada' : '') + '">'
+      + '<input type="radio" name="p_' + p.id + '" data-tipo="respuesta" data-code="' + p.id + '" value="' + esc(op) + '"' + (marcada ? ' checked' : '') + '>'
+      + esc(op) + '</label>';
+  });
+  html += '</div>';
+
+  condicionalesVisibles(p, estado.respuestas).forEach(function (c) {
+    html += '<div class="condicional">';
+    if (c.opciones) {
+      html += campoSelect('respuesta', c.id, c.texto, estado.respuestas[c.id], c.opciones)
+        .replace('data-campo="' + c.id + '"', 'data-code="' + c.id + '"');
+    } else {
+      html += '<label class="campo"><span class="etiqueta">' + esc(c.texto) + '</span>'
+        + '<textarea data-tipo="respuesta" data-code="' + c.id + '">' + esc(estado.respuestas[c.id]) + '</textarea></label>';
+    }
+    html += '</div>';
+  });
+
+  return html + '</div>';
+}
+
+function dibujarElemento(codigoElemento){
+  const preguntas = PREGUNTAS.filter(function (p) { return p.elemento === codigoElemento; });
+  let html = '<div class="titulo-pantalla">' + esc(NOMBRE_ELEMENTO[codigoElemento]) + '</div>'
+    + '<p class="subtitulo">Pantalla ' + (pantallaActual + 1) + ' de 6</p>';
+  preguntas.forEach(function (p) { html += dibujarPreguntaAncla(p); });
+  html += '<div class="fila-botones">'
+    + '<button class="btn btn-atras" id="btn-atras">Atrás</button>'
+    + '<button class="btn btn-enviar" id="btn-siguiente">Siguiente</button></div>';
+  return html;
+}
+
+function dibujarComentario(){
+  let html = '<div class="titulo-pantalla">Para terminar</div>'
+    + '<p class="subtitulo">¿Algo más que quiera contarnos?</p>'
+    + '<label class="campo"><span class="etiqueta">Comentario general (opcional)</span>'
+    + '<textarea data-tipo="comentario">' + esc(estado.comentario) + '</textarea></label>';
+  const textoBoton = modoReemplazo ? 'Reemplazar de todas formas' : 'Enviar encuesta';
+  html += '<div class="fila-botones">'
+    + '<button class="btn btn-atras" id="btn-atras">Atrás</button>'
+    + '<button class="btn btn-enviar" id="btn-enviar">' + esc(textoBoton) + '</button></div>';
+  return html;
+}
+
+// ---------------------------------------------------------------- eventos
+
+function actualizarCampo(el, conRender){
+  const tipo = el.dataset.tipo;
+  if (tipo === 'respuesta') {
+    estado.respuestas[el.dataset.code] = el.value;
+    limpiarOcultas(PREGUNTAS, estado.respuestas);
+  } else if (tipo === 'identificacion') {
+    estado.identificacion[el.dataset.campo] = el.value;
+    if (el.dataset.campo === 'documento') modoReemplazo = false;   // cambió de persona: ya no aplica el reemplazo anterior
+  } else if (tipo === 'meta') {
+    estado[el.dataset.campo] = el.value;
+  } else if (tipo === 'comentario') {
+    estado.comentario = el.value;
+  }
+  if (conRender) render();
+}
+
+function cablearEventos(){
+  document.querySelectorAll('input[type=radio][data-tipo=respuesta]').forEach(function (el) {
+    el.addEventListener('change', function () { actualizarCampo(el, true); });
+  });
+  document.querySelectorAll('select[data-tipo=respuesta]').forEach(function (el) {
+    el.addEventListener('change', function () { actualizarCampo(el, true); });
+  });
+  document.querySelectorAll('select[data-tipo=identificacion]').forEach(function (el) {
+    el.addEventListener('change', function () { actualizarCampo(el, false); });
+  });
+  document.querySelectorAll('textarea[data-tipo], input[data-tipo=identificacion], input[data-tipo=meta]').forEach(function (el) {
+    el.addEventListener('input', function () { actualizarCampo(el, false); });
+  });
+
+  const btnAtras = document.getElementById('btn-atras');
+  if (btnAtras) btnAtras.addEventListener('click', retroceder);
+  const btnSig = document.getElementById('btn-siguiente');
+  if (btnSig) btnSig.addEventListener('click', avanzar);
+  const btnEnv = document.getElementById('btn-enviar');
+  if (btnEnv) btnEnv.addEventListener('click', function () { enviar(modoReemplazo); });
+}
+
+function avanzar(){
+  let error = '';
+  if (pantallaActual === 0) error = validarIdentificacion(estado.identificacion);
+  else error = validarPreguntasElemento(PREGUNTAS, ELEMENTOS_ORDEN[pantallaActual - 1], estado.respuestas);
+  if (error) { avisoActual = { tipo: 'error', titulo: 'Falta información', texto: error }; render(); return; }
+  avisoActual = null;
+  pantallaActual++;
+  render();
+}
+function retroceder(){ avisoActual = null; pantallaActual--; render(); }
+
+async function enviar(rehacer){
+  const btnEnv = document.getElementById('btn-enviar');
+  if (btnEnv) { btnEnv.disabled = true; btnEnv.textContent = 'Enviando…'; }
+  try {
+    const payload = construirPayload({
+      prof: PROF, fecha: estado.fecha, lugar: estado.lugar, identificacion: estado.identificacion,
+      respuestas: estado.respuestas, comentario: estado.comentario, rehacer: rehacer
+    });
+    const d = await pedir(payload);
+    avisoActual = { tipo: 'ok', titulo: 'Encuesta guardada', texto: d.mensaje || 'Se registró correctamente.' };
+    modoReemplazo = false;
+    estado.identificacion = { pais: 'ECUADOR', provincia: estado.identificacion.provincia, canton: estado.identificacion.canton,
+      nombres: '', documento: '', celular: '', grupoEtnico: '', edad: '', rangoEdad: '', sexo: '', discapacidad: '' };
+    estado.respuestas = respuestasIniciales(PREGUNTAS);
+    estado.comentario = '';
+    pantallaActual = 0;
+    render();
+  } catch (err) {
+    if (String(err.message || '').indexOf('Ya existe una encuesta') !== -1) {
+      modoReemplazo = true;
+      avisoActual = { tipo: 'error', titulo: 'Esta persona ya respondió', texto: err.message + ' Si de verdad hay que reemplazarla, toca "Reemplazar de todas formas".' };
+    } else {
+      avisoActual = { tipo: 'error', titulo: 'No se pudo guardar', texto: err.message };
+    }
+    render();
+  }
+}
+
+arrancar();
+</script>
+</body>
+</html>
