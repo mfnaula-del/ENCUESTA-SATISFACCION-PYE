@@ -1,0 +1,14 @@
+{
+  "name": "Encuesta de satisfacción — PyE",
+  "short_name": "Encuesta PyE",
+  "description": "Encuesta de satisfacción para el proyecto — indicador PM KOI",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#F5F4F0",
+  "theme_color": "#3F4A3C",
+  "icons": [
+    { "src": "icono-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "icono-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

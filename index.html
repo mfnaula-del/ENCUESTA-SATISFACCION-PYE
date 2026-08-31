@@ -4,6 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Encuesta de satisfacción</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icono-192.png">
+<meta name="theme-color" content="#3F4A3C">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Encuesta PyE">
 <style>
 :root{
   --papel:#F5F4F0; --carta:#FFFFFF; --tinta:#1A1D1A;
@@ -20,8 +25,7 @@ body{font-family:var(--sans);background:var(--papel);color:var(--tinta);
 .btn{width:100%;padding:14px;border:0;border-radius:10px;font-size:15px;
   font-weight:600;font-family:inherit;cursor:pointer;margin-top:10px}
 .btn-enviar{background:var(--oliva);color:#fff}
-.aviso{border-radius:9px;padding:12px 13px;margin-top:11px;font-size:13px;
-  line-height:1.5}
+.aviso{border-radius:9px;padding:12px 13px;margin-top:11px;font-size:13px;line-height:1.5}
 .aviso b{display:block;margin-bottom:4px}
 .aviso.ok{background:#E3EFE0;color:#2C351F}
 .aviso.error{background:#FBEBE8;color:#7B241A}
@@ -30,8 +34,12 @@ body{font-family:var(--sans);background:var(--papel);color:var(--tinta);
 .subtitulo{font-size:13px;color:var(--apagado);margin-bottom:16px}
 .quien{border:1px solid var(--linea);border-radius:8px;padding:12px 13px;font-size:14px}
 .quien b{display:block;font-size:16px;margin-bottom:2px}
+.etiqueta{display:block;font-size:13px;font-weight:600;color:var(--oliva);margin:14px 0 6px}
+.etiqueta:first-child{margin-top:0}
 .campo select{width:100%;padding:11px 12px;border:1px solid var(--linea);border-radius:8px;
-  font-family:inherit;font-size:15px;color:var(--tinta);background:#fff;margin-top:8px}
+  font-family:inherit;font-size:15px;color:var(--tinta);background:#fff;box-sizing:border-box}
+.enlace-tenue{display:block;text-align:center;margin-top:16px;font-size:13px;color:var(--apagado);
+  text-decoration:underline;background:none;border:0;cursor:pointer;width:100%;font-family:inherit}
 </style>
 </head>
 <body>
@@ -42,12 +50,33 @@ body{font-family:var(--sans);background:var(--papel);color:var(--tinta);
 <script>
 const URL_BACKEND = 'https://script.google.com/macros/s/AKfycbwPONOVUJ4TKYJbowP9tlOeYWSyrpHYeFaZNgAd6rLousFVsCZVBXzyi-sMiBPRKyin/exec';
 
-function parametro(nombre){ return new URLSearchParams(location.search).get(nombre); }
-const PROF_URL = (parametro('prof') || '').toUpperCase();
-const ADMIN = parametro('admin') === '1';
+// Localidades y roles en el orden en que se muestran. Los valores (loc/rol)
+// tienen que coincidir exactamente con los del backend (ENCUESTADORES en
+// Codigo.gs), porque de ahí se calcula el código real.
+const LOCALIDADES_SELECT = [
+  { cod: 'MB', nombre: 'Manabí' }, { cod: 'G', nombre: 'Guayaquil' }, { cod: 'M', nombre: 'Milagro' }
+];
+const ROLES_SELECT = ['Trabajo social', 'Protección', 'Asistente humanitario', 'Psicología'];
+const NOMBRE_LOC = { MB: 'Manabí', G: 'Guayaquil', M: 'Milagro' };
 
+function parametro(nombre){ return new URLSearchParams(location.search).get(nombre); }
 const esc = s => String(s ?? '').replace(/[&<>"]/g,
   c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+// ---- lógica (idéntica a la ya probada con Node) ----
+function buscarCodigo(encuestadores, loc, rol) {
+  const claves = Object.keys(encuestadores);
+  for (let i = 0; i < claves.length; i++) {
+    const e = encuestadores[claves[i]];
+    if (e.loc === loc && e.rol === rol) return claves[i];
+  }
+  return null;
+}
+function leerIdentidadLocal(storage) {
+  try { return JSON.parse(storage.getItem('identidadLocal') || 'null'); } catch (e) { return null; }
+}
+function guardarIdentidadLocal(storage, loc, rol) { storage.setItem('identidadLocal', JSON.stringify({ loc, rol })); }
+function borrarIdentidadLocal(storage) { storage.removeItem('identidadLocal'); }
 
 async function cargar(){
   const cont = document.getElementById('contenido');
@@ -55,52 +84,75 @@ async function cargar(){
     const r = await fetch(URL_BACKEND);
     const d = await r.json();
     if (!d.ok) throw new Error('El backend no respondió correctamente.');
-    dibujar(d.encuestadores);
+    localStorage.setItem('cache_encuestadores', JSON.stringify(d.encuestadores));
+    dibujar(d.encuestadores, false);
   } catch (err) {
-    cont.innerHTML = '<div class="titulo-pantalla">No se pudo conectar</div>'
-      + '<div class="aviso error">' + esc(err.message) + '</div>';
+    const cache = localStorage.getItem('cache_encuestadores');
+    if (cache) {
+      dibujar(JSON.parse(cache), true);
+    } else {
+      cont.innerHTML = '<div class="titulo-pantalla">No se pudo conectar</div>'
+        + '<div class="aviso error">' + esc(err.message) + ' Y no hay todavía una copia guardada en este dispositivo: hace falta abrir la página al menos una vez con señal.</div>';
+    }
   }
 }
 
-function dibujar(encuestadores){
+function dibujar(encuestadores, sinConexion){
+  const identidad = leerIdentidadLocal(localStorage);
+  const avisoSinConexion = sinConexion
+    ? '<div class="aviso neutro"><b>Trabajando sin conexión</b>Se está usando la última lista guardada en este dispositivo.</div>' : '';
+
+  if (identidad && buscarCodigo(encuestadores, identidad.loc, identidad.rol)) {
+    dibujarConfirmacion(identidad, avisoSinConexion);
+  } else {
+    dibujarSelector(avisoSinConexion);
+  }
+}
+
+function dibujarConfirmacion(identidad, avisoSinConexion){
   const cont = document.getElementById('contenido');
-
-  if (ADMIN) {
-    const opciones = Object.keys(encuestadores).map(function (cod) {
-      const e = encuestadores[cod];
-      return '<option value="' + esc(cod) + '">' + esc(e.nombre) + ' — ' + esc(e.rol) + ' (' + esc(e.loc) + ')</option>';
-    }).join('');
-    cont.innerHTML =
-      '<div class="titulo-pantalla">Modo administrador</div>'
-      + '<p class="subtitulo">Elige con qué encuestador quieres probar la encuesta.</p>'
-      + '<div class="campo"><select id="selector">' + opciones + '</select></div>'
-      + '<button class="btn btn-enviar" id="ir">Comenzar encuesta</button>';
-    document.getElementById('ir').addEventListener('click', function () {
-      const cod = document.getElementById('selector').value;
-      location.href = 'encuesta.html?prof=' + cod + '&admin=1';
-    });
-    return;
-  }
-
-  const quien = encuestadores[PROF_URL];
-  if (!quien) {
-    cont.innerHTML =
-      '<div class="titulo-pantalla">Enlace no reconocido</div>'
-      + '<div class="aviso error">Este enlace no está asociado a ningún encuestador. Pide tu enlace personal.</div>';
-    return;
-  }
-
   cont.innerHTML =
     '<div class="titulo-pantalla">Encuesta de satisfacción</div>'
+    + avisoSinConexion
     + '<p class="subtitulo">Vas a registrar respuestas como:</p>'
-    + '<div class="quien"><b>' + esc(quien.nombre) + '</b>' + esc(quien.rol) + ' · ' + esc(quien.loc) + '</div>'
-    + '<button class="btn btn-enviar" id="ir">Comenzar encuesta</button>';
-  document.getElementById('ir').addEventListener('click', function () {
-    location.href = 'encuesta.html' + location.search;
+    + '<div class="quien"><b>' + esc(identidad.rol) + '</b>' + esc(NOMBRE_LOC[identidad.loc]) + '</div>'
+    + '<button class="btn btn-enviar" id="ir">Comenzar encuesta</button>'
+    + '<button class="enlace-tenue" id="cambiar">No soy yo — cambiar</button>';
+  document.getElementById('ir').addEventListener('click', function () { location.href = 'encuesta.html'; });
+  document.getElementById('cambiar').addEventListener('click', function () {
+    borrarIdentidadLocal(localStorage);
+    dibujarSelector('');
+  });
+}
+
+function dibujarSelector(avisoSinConexion){
+  const cont = document.getElementById('contenido');
+  const opcionesLoc = LOCALIDADES_SELECT.map(function (l) { return '<option value="' + l.cod + '">' + esc(l.nombre) + '</option>'; }).join('');
+  const opcionesRol = ROLES_SELECT.map(function (r) { return '<option value="' + esc(r) + '">' + esc(r) + '</option>'; }).join('');
+  cont.innerHTML =
+    '<div class="titulo-pantalla">¿Quién va a responder la encuesta?</div>'
+    + avisoSinConexion
+    + '<p class="subtitulo">Elige tu localidad y tu área de trabajo. Se va a guardar en este dispositivo para la próxima vez.</p>'
+    + '<label class="campo"><span class="etiqueta">Localidad</span><select id="sel-loc">' + opcionesLoc + '</select></label>'
+    + '<label class="campo"><span class="etiqueta">Área de trabajo</span><select id="sel-rol">' + opcionesRol + '</select></label>'
+    + '<button class="btn btn-enviar" id="guardar">Guardar y comenzar</button>';
+  document.getElementById('guardar').addEventListener('click', function () {
+    const loc = document.getElementById('sel-loc').value;
+    const rol = document.getElementById('sel-rol').value;
+    guardarIdentidadLocal(localStorage, loc, rol);
+    location.href = 'encuesta.html';
   });
 }
 
 cargar();
+
+if ('serviceWorker' in navigator && navigator.serviceWorker) {
+  try {
+    navigator.serviceWorker.register('sw.js').catch(function (err) {
+      console.warn('No se pudo activar el modo sin conexión:', err);
+    });
+  } catch (err) { console.warn('No se pudo activar el modo sin conexión:', err); }
+}
 </script>
 </body>
 </html>

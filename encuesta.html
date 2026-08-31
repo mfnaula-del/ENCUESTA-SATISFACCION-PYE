@@ -4,6 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Encuesta de satisfacción</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icono-192.png">
+<meta name="theme-color" content="#3F4A3C">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Encuesta PyE">
 <style>
 :root{
   --papel:#F5F4F0; --carta:#FFFFFF; --tinta:#1A1D1A;
@@ -68,7 +73,29 @@ body{font-family:var(--sans);background:var(--papel);color:var(--tinta);
 const URL_BACKEND = 'https://script.google.com/macros/s/AKfycbwPONOVUJ4TKYJbowP9tlOeYWSyrpHYeFaZNgAd6rLousFVsCZVBXzyi-sMiBPRKyin/exec';
 
 function parametro(nombre){ return new URLSearchParams(location.search).get(nombre); }
-const PROF = (parametro('prof') || '').toUpperCase();
+let PROF = null;   // se determina en arrancar(): identidad guardada, o ?prof= como excepción puntual
+
+function buscarCodigo(encuestadores, loc, rol) {
+  const claves = Object.keys(encuestadores);
+  for (let i = 0; i < claves.length; i++) {
+    const e = encuestadores[claves[i]];
+    if (e.loc === loc && e.rol === rol) return claves[i];
+  }
+  return null;
+}
+function leerIdentidadLocal(storage) {
+  try { return JSON.parse(storage.getItem('identidadLocal') || 'null'); } catch (e) { return null; }
+}
+function resolverProf(encuestadores, storage, profUrl) {
+  const u = String(profUrl || '').toUpperCase();
+  if (u && encuestadores[u]) return u;
+  const identidad = leerIdentidadLocal(storage);
+  if (identidad) {
+    const cod = buscarCodigo(encuestadores, identidad.loc, identidad.rol);
+    if (cod) return cod;
+  }
+  return null;
+}
 
 const esc = s => String(s ?? '').replace(/[&<>"]/g,
   c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -76,7 +103,14 @@ const esc = s => String(s ?? '').replace(/[&<>"]/g,
 async function pedir(datos){
   const cuerpo = new URLSearchParams();
   Object.keys(datos).forEach(function (k) { cuerpo.append(k, datos[k]); });
-  const r = await fetch(URL_BACKEND, { method: 'POST', body: cuerpo });
+  let r;
+  try {
+    r = await fetch(URL_BACKEND, { method: 'POST', body: cuerpo });
+  } catch (falloDeRed) {
+    const e = new Error('Sin conexión');
+    e.esFalloDeRed = true;
+    throw e;
+  }
   const d = await r.json();
   if (!d.exito && d.error) throw new Error(d.error);
   return d;
@@ -134,6 +168,54 @@ function construirPayload(datos) {
   return payload;
 }
 
+// ------------------------------------------------------------ modo sin conexión
+
+function guardarCacheDatos(storage, encuestadores, preguntas) {
+  storage.setItem('cache_encuestadores', JSON.stringify(encuestadores));
+  storage.setItem('cache_preguntas', JSON.stringify(preguntas));
+}
+function leerCacheDatos(storage) {
+  try {
+    const e = storage.getItem('cache_encuestadores');
+    const p = storage.getItem('cache_preguntas');
+    if (!e || !p) return null;
+    return { encuestadores: JSON.parse(e), preguntas: JSON.parse(p) };
+  } catch (err) { return null; }
+}
+function leerCola(storage) {
+  try { return JSON.parse(storage.getItem('colaEncuestas') || '[]'); } catch (e) { return []; }
+}
+function escribirCola(storage, cola) { storage.setItem('colaEncuestas', JSON.stringify(cola)); }
+function encolar(storage, payload) {
+  const cola = leerCola(storage);
+  cola.push({ id: Date.now() + '_' + Math.random().toString(36).slice(2),
+              payload: payload, creado: new Date().toISOString(), estado: 'pendiente' });
+  escribirCola(storage, cola);
+  return cola;
+}
+async function vaciarCola(storage, enviarFn) {
+  const cola = leerCola(storage);
+  const restante = [];
+  let sinConexionDesdeAqui = false;
+  for (let i = 0; i < cola.length; i++) {
+    const item = cola[i];
+    if (item.estado === 'bloqueada' || sinConexionDesdeAqui) { restante.push(item); continue; }
+    try {
+      await enviarFn(item.payload);
+    } catch (err) {
+      if (err && err.esFalloDeRed) { sinConexionDesdeAqui = true; restante.push(item); }
+      else { item.estado = 'bloqueada'; item.error = String((err && err.message) || err); restante.push(item); }
+    }
+  }
+  escribirCola(storage, restante);
+  return restante;
+}
+function quitarDeCola(storage, id) {
+  const cola = leerCola(storage).filter(function (item) { return item.id !== id; });
+  escribirCola(storage, cola);
+  return cola;
+}
+
 // ---------------------------------------------------------------- estado
 
 const ELEMENTOS_ORDEN = ['SDH', 'MEA', 'ACC', 'PEM'];
@@ -146,6 +228,7 @@ const NOMBRE_LOCALIDAD_A_CATALOGO = {
   G:  { provincia: 'GUAYAS', canton: 'GUAYAQUIL' },
   M:  { provincia: 'GUAYAS', canton: 'MILAGRO' }
 };
+const NOMBRE_LOC = { MB: 'Manabí', G: 'Guayaquil', M: 'Milagro' };
 
 let PREGUNTAS = [];
 let QUIEN = null;
@@ -165,37 +248,79 @@ let modoReemplazo = false;   // true solo cuando ya se detectó un documento dup
 
 async function arrancar(){
   const cont = document.getElementById('contenido');
-  if (!PROF) {
-    cont.innerHTML = '<div class="titulo-pantalla">Enlace incompleto</div>'
-      + '<div class="aviso error">Este enlace no trae quién eres. Vuelve a abrirlo desde tu enlace personal.</div>';
-    return;
-  }
+  const profUrl = parametro('prof');
   try {
     const [datosGet, datosItems] = await Promise.all([
       fetch(URL_BACKEND).then(function (r) { return r.json(); }),
       pedir({ accion: 'itemsEncuesta' })
     ]);
     if (!datosGet.ok || !datosItems.exito) throw new Error('El backend no respondió correctamente.');
+    guardarCacheDatos(localStorage, datosGet.encuestadores, datosItems.preguntas);
+    PROF = resolverProf(datosGet.encuestadores, localStorage, profUrl);
+    if (!PROF) { mostrarFaltaIdentidad(); return; }
     QUIEN = datosGet.encuestadores[PROF];
-    if (!QUIEN) throw new Error('El código "' + PROF + '" no corresponde a ningún encuestador.');
     PREGUNTAS = datosItems.preguntas;
-    estado.respuestas = respuestasIniciales(PREGUNTAS);
-    const catalogo = NOMBRE_LOCALIDAD_A_CATALOGO[QUIEN.loc];
-    if (catalogo) { estado.identificacion.provincia = catalogo.provincia; estado.identificacion.canton = catalogo.canton; }
+    prepararPantalla();
     render();
+    intentarVaciarCola();
   } catch (err) {
-    cont.innerHTML = '<div class="titulo-pantalla">No se pudo cargar la encuesta</div>'
-      + '<div class="aviso error">' + esc(err.message) + '</div>';
+    // Sin señal (o el backend no respondió): se usa la última copia buena
+    // guardada en este dispositivo, si existe, para poder seguir trabajando.
+    const cache = leerCacheDatos(localStorage);
+    PROF = cache ? resolverProf(cache.encuestadores, localStorage, profUrl) : null;
+    if (cache && PROF) {
+      QUIEN = cache.encuestadores[PROF];
+      PREGUNTAS = cache.preguntas;
+      prepararPantalla();
+      avisoActual = { tipo: 'neutro', titulo: 'Trabajando sin conexión',
+        texto: 'Se está usando la última versión guardada del formulario. Las respuestas se guardan en este dispositivo y se envían solas cuando vuelva la señal.' };
+      render();
+      intentarVaciarCola();
+    } else if (!cache) {
+      cont.innerHTML = '<div class="titulo-pantalla">No se pudo cargar la encuesta</div>'
+        + '<div class="aviso error">' + esc(err.message) + ' Y no hay todavía una copia guardada en este dispositivo: hace falta abrir la encuesta al menos una vez con señal.</div>';
+    } else {
+      mostrarFaltaIdentidad();
+    }
   }
+}
+
+function mostrarFaltaIdentidad(){
+  const cont = document.getElementById('contenido');
+  cont.innerHTML = '<div class="titulo-pantalla">Falta elegir quién eres</div>'
+    + '<div class="aviso neutro">Este dispositivo todavía no tiene una localidad y área guardadas.</div>'
+    + '<a class="btn btn-enviar" style="display:block;text-align:center;text-decoration:none;box-sizing:border-box" href="index.html">Elegir en la página principal</a>';
+}
+
+function prepararPantalla(){
+  estado.respuestas = respuestasIniciales(PREGUNTAS);
+  const catalogo = NOMBRE_LOCALIDAD_A_CATALOGO[QUIEN.loc];
+  if (catalogo) { estado.identificacion.provincia = catalogo.provincia; estado.identificacion.canton = catalogo.canton; }
 }
 
 // ---------------------------------------------------------------- render
 
 function render(){
   const cont = document.getElementById('contenido');
-  cont.innerHTML = dibujarPasos() + dibujarAviso() + dibujarPantalla() + dibujarPie();
+  cont.innerHTML = dibujarPasos() + dibujarEstadoCola() + dibujarAviso() + dibujarPantalla() + dibujarPie();
   cablearEventos();
   window.scrollTo(0, 0);
+}
+
+function dibujarEstadoCola(){
+  const cola = leerCola(localStorage);
+  if (!cola.length) return '';
+  const pendientes = cola.filter(function (i) { return i.estado !== 'bloqueada'; });
+  const bloqueadas = cola.filter(function (i) { return i.estado === 'bloqueada'; });
+  let html = '';
+  if (pendientes.length) {
+    const plural = pendientes.length === 1 ? 'encuesta guardada en este celular, pendiente de enviar' : 'encuestas guardadas en este celular, pendientes de enviar';
+    html += '<div class="aviso neutro"><b>' + pendientes.length + ' ' + plural + '</b>Se envían solas apenas haya conexión.</div>';
+  }
+  bloqueadas.forEach(function (item) {
+    html += '<div class="aviso error"><b>Una encuesta pendiente no se pudo enviar</b>' + esc(item.error) + '</div>';
+  });
+  return html;
 }
 
 function dibujarPasos(){
@@ -214,7 +339,7 @@ function dibujarAviso(){
 
 function dibujarPie(){
   if (!QUIEN) return '';
-  return '<p class="quien-pie">' + esc(QUIEN.nombre) + ' · ' + esc(QUIEN.rol) + '</p>';
+  return '<p class="quien-pie">' + esc(QUIEN.rol) + ' · ' + esc(NOMBRE_LOC[QUIEN.loc]) + '</p>';
 }
 
 function dibujarPantalla(){
@@ -361,32 +486,60 @@ function retroceder(){ avisoActual = null; pantallaActual--; render(); }
 async function enviar(rehacer){
   const btnEnv = document.getElementById('btn-enviar');
   if (btnEnv) { btnEnv.disabled = true; btnEnv.textContent = 'Enviando…'; }
+  const payload = construirPayload({
+    prof: PROF, fecha: estado.fecha, lugar: estado.lugar, identificacion: estado.identificacion,
+    respuestas: estado.respuestas, comentario: estado.comentario, rehacer: rehacer
+  });
   try {
-    const payload = construirPayload({
-      prof: PROF, fecha: estado.fecha, lugar: estado.lugar, identificacion: estado.identificacion,
-      respuestas: estado.respuestas, comentario: estado.comentario, rehacer: rehacer
-    });
     const d = await pedir(payload);
     avisoActual = { tipo: 'ok', titulo: 'Encuesta guardada', texto: d.mensaje || 'Se registró correctamente.' };
-    modoReemplazo = false;
-    estado.identificacion = { pais: 'ECUADOR', provincia: estado.identificacion.provincia, canton: estado.identificacion.canton,
-      nombres: '', documento: '', celular: '', grupoEtnico: '', edad: '', rangoEdad: '', sexo: '', discapacidad: '' };
-    estado.respuestas = respuestasIniciales(PREGUNTAS);
-    estado.comentario = '';
-    pantallaActual = 0;
-    render();
+    reiniciarFormularioParaSiguiente();
   } catch (err) {
-    if (String(err.message || '').indexOf('Ya existe una encuesta') !== -1) {
+    if (err.esFalloDeRed) {
+      encolar(localStorage, payload);
+      avisoActual = { tipo: 'ok', titulo: 'Guardada sin conexión', texto: 'Se guardó en este celular y se enviará sola cuando haya señal.' };
+      reiniciarFormularioParaSiguiente();
+    } else if (String(err.message || '').indexOf('Ya existe una encuesta') !== -1) {
       modoReemplazo = true;
       avisoActual = { tipo: 'error', titulo: 'Esta persona ya respondió', texto: err.message + ' Si de verdad hay que reemplazarla, toca "Reemplazar de todas formas".' };
+      render();
     } else {
       avisoActual = { tipo: 'error', titulo: 'No se pudo guardar', texto: err.message };
+      render();
     }
-    render();
   }
 }
 
+function reiniciarFormularioParaSiguiente(){
+  modoReemplazo = false;
+  estado.identificacion = { pais: 'ECUADOR', provincia: estado.identificacion.provincia, canton: estado.identificacion.canton,
+    nombres: '', documento: '', celular: '', grupoEtnico: '', edad: '', rangoEdad: '', sexo: '', discapacidad: '' };
+  estado.respuestas = respuestasIniciales(PREGUNTAS);
+  estado.comentario = '';
+  pantallaActual = 0;
+  render();
+}
+
+/** Reintenta enviar lo que quedó pendiente. Se llama sola: al cargar, al
+ *  recuperar señal, y cada 20 segundos mientras la página esté abierta. */
+async function intentarVaciarCola(){
+  if (!leerCola(localStorage).length) return;
+  await vaciarCola(localStorage, function (payloadGuardado) { return pedir(payloadGuardado); });
+  render();
+}
+
+window.addEventListener('online', intentarVaciarCola);
+setInterval(intentarVaciarCola, 20000);
+
 arrancar();
+
+if ('serviceWorker' in navigator && navigator.serviceWorker) {
+  try {
+    navigator.serviceWorker.register('sw.js').catch(function (err) {
+      console.warn('No se pudo activar el modo sin conexión:', err);
+    });
+  } catch (err) { console.warn('No se pudo activar el modo sin conexión:', err); }
+}
 </script>
 </body>
 </html>
