@@ -164,7 +164,6 @@ function construirPayload(datos) {
     identificacion: JSON.stringify(datos.identificacion), respuestas: JSON.stringify(datos.respuestas),
     comentario: datos.comentario
   };
-  if (datos.rehacer) payload.rehacer = 'si';
   return payload;
 }
 
@@ -242,7 +241,7 @@ let estado = {
   comentario: ''
 };
 let avisoActual = null;
-let modoReemplazo = false;   // true solo cuando ya se detectó un documento duplicado y la persona confirmó reemplazarlo
+let avisoDuplicado = null;   // { tipo, encuestador, fecha } — solo informa, nunca bloquea
 
 // ---------------------------------------------------------------- arranque
 
@@ -302,9 +301,18 @@ function prepararPantalla(){
 
 function render(){
   const cont = document.getElementById('contenido');
-  cont.innerHTML = dibujarPasos() + dibujarEstadoCola() + dibujarAviso() + dibujarPantalla() + dibujarPie();
+  cont.innerHTML = dibujarPasos() + dibujarEstadoCola() + dibujarAvisoDuplicado() + dibujarAviso() + dibujarPantalla() + dibujarPie();
   cablearEventos();
   window.scrollTo(0, 0);
+}
+
+const ETIQUETA_TIPO_COINCIDENCIA = { documento: 'el mismo documento', celular: 'el mismo celular', nombre: 'un nombre parecido' };
+
+function dibujarAvisoDuplicado(){
+  if (!avisoDuplicado) return '';
+  const c = avisoDuplicado;
+  return '<div class="aviso error"><b>Ya existe un registro con ' + esc(ETIQUETA_TIPO_COINCIDENCIA[c.tipo] || 'datos parecidos') + '</b>'
+    + 'Lo aplicó ' + esc(c.encuestador) + ' el ' + esc(c.fecha) + '. Si es una persona distinta, puedes continuar sin problema.</div>';
 }
 
 function dibujarEstadoCola(){
@@ -425,10 +433,9 @@ function dibujarComentario(){
     + '<p class="subtitulo">¿Algo más que quiera contarnos?</p>'
     + '<label class="campo"><span class="etiqueta">Comentario general (opcional)</span>'
     + '<textarea data-tipo="comentario">' + esc(estado.comentario) + '</textarea></label>';
-  const textoBoton = modoReemplazo ? 'Reemplazar de todas formas' : 'Enviar encuesta';
   html += '<div class="fila-botones">'
     + '<button class="btn btn-atras" id="btn-atras">Atrás</button>'
-    + '<button class="btn btn-enviar" id="btn-enviar">' + esc(textoBoton) + '</button></div>';
+    + '<button class="btn btn-enviar" id="btn-enviar">Enviar encuesta</button></div>';
   return html;
 }
 
@@ -441,7 +448,7 @@ function actualizarCampo(el, conRender){
     limpiarOcultas(PREGUNTAS, estado.respuestas);
   } else if (tipo === 'identificacion') {
     estado.identificacion[el.dataset.campo] = el.value;
-    if (el.dataset.campo === 'documento') modoReemplazo = false;   // cambió de persona: ya no aplica el reemplazo anterior
+    if (['documento', 'celular', 'nombres'].indexOf(el.dataset.campo) !== -1) avisoDuplicado = null;
   } else if (tipo === 'meta') {
     estado[el.dataset.campo] = el.value;
   } else if (tipo === 'comentario') {
@@ -469,40 +476,50 @@ function cablearEventos(){
   const btnSig = document.getElementById('btn-siguiente');
   if (btnSig) btnSig.addEventListener('click', avanzar);
   const btnEnv = document.getElementById('btn-enviar');
-  if (btnEnv) btnEnv.addEventListener('click', function () { enviar(modoReemplazo); });
+  if (btnEnv) btnEnv.addEventListener('click', enviar);
 }
 
-function avanzar(){
+async function avanzar(){
   let error = '';
   if (pantallaActual === 0) error = validarIdentificacion(estado.identificacion);
   else error = validarPreguntasElemento(PREGUNTAS, ELEMENTOS_ORDEN[pantallaActual - 1], estado.respuestas);
   if (error) { avisoActual = { tipo: 'error', titulo: 'Falta información', texto: error }; render(); return; }
   avisoActual = null;
+
+  if (pantallaActual === 0) {
+    avisoDuplicado = null;
+    const btnSig = document.getElementById('btn-siguiente');
+    if (btnSig) { btnSig.disabled = true; btnSig.textContent = 'Verificando…'; }
+    try {
+      const d = await pedir({ accion: 'verificarDuplicado', identificacion: JSON.stringify(estado.identificacion) });
+      if (d.coincidencia) avisoDuplicado = d.coincidencia;
+    } catch (err) { /* sin conexión: no se puede verificar ahora mismo, se continúa igual */ }
+  }
+
   pantallaActual++;
   render();
 }
 function retroceder(){ avisoActual = null; pantallaActual--; render(); }
 
-async function enviar(rehacer){
+async function enviar(){
   const btnEnv = document.getElementById('btn-enviar');
   if (btnEnv) { btnEnv.disabled = true; btnEnv.textContent = 'Enviando…'; }
   const payload = construirPayload({
     prof: PROF, fecha: estado.fecha, lugar: estado.lugar, identificacion: estado.identificacion,
-    respuestas: estado.respuestas, comentario: estado.comentario, rehacer: rehacer
+    respuestas: estado.respuestas, comentario: estado.comentario
   });
   try {
     const d = await pedir(payload);
-    avisoActual = { tipo: 'ok', titulo: 'Encuesta guardada', texto: d.mensaje || 'Se registró correctamente.' };
+    const nota = d.coincidencia
+      ? ' (nota: ya existía un registro con ' + (ETIQUETA_TIPO_COINCIDENCIA[d.coincidencia.tipo] || 'datos parecidos') + ', aplicado por ' + d.coincidencia.encuestador + ')'
+      : '';
+    avisoActual = { tipo: 'ok', titulo: 'Encuesta guardada', texto: (d.mensaje || 'Se registró correctamente.') + nota };
     reiniciarFormularioParaSiguiente();
   } catch (err) {
     if (err.esFalloDeRed) {
       encolar(localStorage, payload);
       avisoActual = { tipo: 'ok', titulo: 'Guardada sin conexión', texto: 'Se guardó en este celular y se enviará sola cuando haya señal.' };
       reiniciarFormularioParaSiguiente();
-    } else if (String(err.message || '').indexOf('Ya existe una encuesta') !== -1) {
-      modoReemplazo = true;
-      avisoActual = { tipo: 'error', titulo: 'Esta persona ya respondió', texto: err.message + ' Si de verdad hay que reemplazarla, toca "Reemplazar de todas formas".' };
-      render();
     } else {
       avisoActual = { tipo: 'error', titulo: 'No se pudo guardar', texto: err.message };
       render();
@@ -511,7 +528,7 @@ async function enviar(rehacer){
 }
 
 function reiniciarFormularioParaSiguiente(){
-  modoReemplazo = false;
+  avisoDuplicado = null;
   estado.identificacion = { pais: 'ECUADOR', provincia: estado.identificacion.provincia, canton: estado.identificacion.canton,
     nombres: '', documento: '', celular: '', grupoEtnico: '', edad: '', rangoEdad: '', sexo: '', discapacidad: '' };
   estado.respuestas = respuestasIniciales(PREGUNTAS);
