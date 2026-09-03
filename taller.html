@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Evaluación de talleres</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icono-192.png">
+<meta name="theme-color" content="#3F4A3C">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Talleres PyE">
+<style>
+:root{
+  --papel:#F5F4F0; --carta:#FFFFFF; --tinta:#1A1D1A;
+  --oliva:#3F4A3C; --linea:#E2E0DA; --apagado:#7A7C75;
+  --senal:#9B2C1F; --ambar:#B8860B;
+  --sans:-apple-system,'Segoe UI',system-ui,sans-serif;
+  --mono:'SF Mono',Menlo,monospace;
+}
+body{font-family:var(--sans);background:var(--papel);color:var(--tinta);
+  padding:20px 16px;line-height:1.5}
+.envoltura{max-width:600px;margin:0 auto}
+.carta{background:var(--carta);border:1px solid var(--linea);
+  border-radius:12px;padding:16px}
+.btn{width:100%;padding:14px;border:0;border-radius:10px;font-size:15px;
+  font-weight:600;font-family:inherit;cursor:pointer;margin-top:10px}
+.btn-enviar{background:var(--oliva);color:#fff}
+.btn-secundario{background:#fff;color:var(--oliva);border:1px solid var(--oliva)}
+.btn:disabled{opacity:.5;cursor:default}
+.aviso{border-radius:9px;padding:12px 13px;margin-top:11px;font-size:13px;line-height:1.5}
+.aviso b{display:block;margin-bottom:4px}
+.aviso.ok{background:#E3EFE0;color:#2C351F}
+.aviso.error{background:#FBEBE8;color:#7B241A}
+.aviso.neutro{background:#FDF3E3;color:#5C4210}
+.titulo-pantalla{font-size:19px;font-weight:700;margin-bottom:4px}
+.subtitulo{font-size:13px;color:var(--apagado);margin-bottom:16px}
+.quien{border:1px solid var(--linea);border-radius:8px;padding:10px 12px;font-size:13px;
+  display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+.quien b{font-size:14px}
+.quien button{background:none;border:0;color:var(--apagado);text-decoration:underline;
+  font-size:12px;font-family:inherit;cursor:pointer;padding:0}
+.etiqueta{display:block;font-size:13px;font-weight:600;color:var(--oliva);margin:14px 0 6px}
+.etiqueta:first-child{margin-top:0}
+.campo select,.campo input[type=text],.campo input[type=date]{
+  width:100%;padding:11px 12px;border:1px solid var(--linea);border-radius:8px;
+  font-family:inherit;font-size:15px;color:var(--tinta);background:#fff;box-sizing:border-box}
+.campo input[type=file]{width:100%;font-size:13px;padding:10px;border:1px dashed var(--linea);
+  border-radius:8px;background:#fafaf8;box-sizing:border-box}
+.tipo-grupo{display:flex;gap:8px}
+.tipo-btn{flex:1;padding:12px;border:1px solid var(--linea);border-radius:8px;background:#fff;
+  font-family:inherit;font-size:14px;font-weight:600;color:var(--apagado);cursor:pointer}
+.tipo-btn.activo{background:var(--oliva);color:#fff;border-color:var(--oliva)}
+.enlace-tenue{display:block;text-align:center;margin-top:16px;font-size:13px;color:var(--apagado);
+  text-decoration:underline;background:none;border:0;cursor:pointer;width:100%;font-family:inherit}
+.hoja-card{border:1px solid var(--linea);border-radius:10px;padding:12px 13px;margin-top:12px}
+.hoja-card-cabeza{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.hoja-card-cabeza b{font-size:14px}
+.marca-revisar{font-size:11px;font-weight:600;color:var(--ambar);background:#FDF3E3;
+  padding:3px 8px;border-radius:20px}
+.pregunta-fila{margin-top:8px}
+.pregunta-fila span{display:block;font-size:12px;color:var(--apagado);margin-bottom:4px}
+.pregunta-fila select{width:100%;padding:9px 10px;border:1px solid var(--linea);border-radius:7px;
+  font-family:inherit;font-size:14px;background:#fff}
+.girando{display:inline-block;width:16px;height:16px;border:2px solid var(--linea);
+  border-top-color:var(--oliva);border-radius:50%;animation:girar 0.8s linear infinite;
+  vertical-align:middle;margin-right:8px}
+@keyframes girar{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div class="envoltura">
+  <div class="carta" id="contenido"><p>Cargando…</p></div>
+</div>
+
+<script>
+// TODO: pega aquí la URL /exec de la implementación como app web de talleres.gs
+// (Apps Script del proyecto de talleres > Implementar > Nueva implementación >
+// Aplicación web > Ejecutar como: yo, Quién tiene acceso: cualquiera con el enlace).
+const URL_BACKEND = 'https://script.google.com/macros/s/AKfycbwL7ismHk5sFHWwzNbe0-YgaYOT6CWHWRGIO29OmAJ-iyBqo6syDAc-fghwU1S8i_jF/exec';
+
+// Mismas 3 preguntas y mismo orden que PREGUNTAS_TALLER en talleres.gs —
+// si cambian allá, hay que cambiarlas aquí también.
+const PREGUNTAS = [
+  '¿Cuánto conoces sobre los derechos humanos?',
+  '¿Cuánto conoces sobre entornos seguros y de riesgo?',
+  '¿Cuánto conoces sobre cómo las personas pueden ayudar y proteger a su comunidad?'
+];
+
+// Mismas localidades/roles y misma clave de localStorage que index.html de la
+// encuesta — así, si ya se eligió ahí, aquí no se vuelve a preguntar.
+const LOCALIDADES_SELECT = [
+  { cod: 'MB', nombre: 'Manabí' }, { cod: 'G', nombre: 'Guayaquil' }, { cod: 'M', nombre: 'Milagro' }
+];
+const ROLES_SELECT = ['Trabajo social', 'Protección', 'Asistente humanitario', 'Psicología'];
+const NOMBRE_LOC = { MB: 'Manabí', G: 'Guayaquil', M: 'Milagro' };
+
+const esc = s => String(s ?? '').replace(/[&<>"]/g,
+  c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+function leerIdentidadLocal() {
+  try { return JSON.parse(localStorage.getItem('identidadLocal') || 'null'); } catch (e) { return null; }
+}
+function guardarIdentidadLocal(loc, rol) {
+  localStorage.setItem('identidadLocal', JSON.stringify({ loc, rol }));
+}
+function borrarIdentidadLocal() { localStorage.removeItem('identidadLocal'); }
+
+// ---- estado de la sesión en esta pantalla ----
+const estado = {
+  identidad: null,
+  tipo: 'PRE',
+  grupo: '', fecha: '', lugar: '',
+  hojas: []   // [{ numeroHoja, modulo1, modulo2, modulo3, legible }, ...]
+};
+
+function llamarBackend(accion, campos) {
+  const cuerpo = new URLSearchParams(Object.assign({ accion: accion }, campos));
+  return fetch(URL_BACKEND, { method: 'POST', body: cuerpo })
+    .then(function (r) { return r.json(); });
+}
+
+function leerArchivoComoBase64(archivo) {
+  return new Promise(function (resolve, reject) {
+    const lector = new FileReader();
+    lector.onload = function () {
+      const resultado = String(lector.result || '');
+      const coma = resultado.indexOf(',');
+      resolve(coma >= 0 ? resultado.slice(coma + 1) : resultado);
+    };
+    lector.onerror = function () { reject(new Error('No se pudo leer el archivo del celular.')); };
+    lector.readAsDataURL(archivo);
+  });
+}
+
+// ==================================================== pantalla 1: identidad
+
+function iniciar() {
+  estado.identidad = leerIdentidadLocal();
+  if (estado.identidad) {
+    pantallaFormulario();
+  } else {
+    pantallaSelectorIdentidad('');
+  }
+}
+
+function pantallaSelectorIdentidad(aviso) {
+  const cont = document.getElementById('contenido');
+  const opcionesLoc = LOCALIDADES_SELECT.map(function (l) { return '<option value="' + l.cod + '">' + esc(l.nombre) + '</option>'; }).join('');
+  const opcionesRol = ROLES_SELECT.map(function (r) { return '<option value="' + esc(r) + '">' + esc(r) + '</option>'; }).join('');
+  cont.innerHTML =
+    '<div class="titulo-pantalla">¿Quién va a registrar el taller?</div>'
+    + aviso
+    + '<p class="subtitulo">Elige tu localidad y tu área de trabajo. Se va a guardar en este dispositivo para la próxima vez (es lo mismo que ya elegiste en la encuesta, si la usas).</p>'
+    + '<label class="campo"><span class="etiqueta">Localidad</span><select id="sel-loc">' + opcionesLoc + '</select></label>'
+    + '<label class="campo"><span class="etiqueta">Área de trabajo</span><select id="sel-rol">' + opcionesRol + '</select></label>'
+    + '<button class="btn btn-enviar" id="guardar-identidad">Guardar y continuar</button>';
+  document.getElementById('guardar-identidad').addEventListener('click', function () {
+    const loc = document.getElementById('sel-loc').value;
+    const rol = document.getElementById('sel-rol').value;
+    guardarIdentidadLocal(loc, rol);
+    estado.identidad = { loc: loc, rol: rol };
+    pantallaFormulario();
+  });
+}
+
+// ==================================================== pantalla 2: formulario + subir PDF
+
+function franjaIdentidad() {
+  return '<div class="quien"><span><b>' + esc(estado.identidad.rol) + '</b> · ' + esc(NOMBRE_LOC[estado.identidad.loc]) + '</span>'
+    + '<button id="cambiar-identidad">no soy yo</button></div>';
+}
+
+function pantallaFormulario(aviso) {
+  const cont = document.getElementById('contenido');
+  const hoy = new Date().toISOString().slice(0, 10);
+  cont.innerHTML =
+    '<div class="titulo-pantalla">Evaluación de taller</div>'
+    + '<p class="subtitulo">Sube el PDF con todas las hojas de un mismo tipo (todos los PRE, o todos los POST, de un grupo).</p>'
+    + franjaIdentidad()
+    + (aviso || '')
+    + '<span class="etiqueta">Tipo de evaluación</span>'
+    + '<div class="tipo-grupo">'
+    + '  <button type="button" class="tipo-btn' + (estado.tipo === 'PRE' ? ' activo' : '') + '" data-tipo="PRE">Ex Ante (PRE)</button>'
+    + '  <button type="button" class="tipo-btn' + (estado.tipo === 'POST' ? ' activo' : '') + '" data-tipo="POST">Ex Post (POST)</button>'
+    + '</div>'
+    + '<label class="campo"><span class="etiqueta">Código o nombre del grupo</span>'
+    + '  <input type="text" id="campo-grupo" placeholder="Ej. Grupo A - Manta" value="' + esc(estado.grupo) + '"></label>'
+    + '<label class="campo"><span class="etiqueta">Fecha del taller</span>'
+    + '  <input type="date" id="campo-fecha" max="' + hoy + '" value="' + esc(estado.fecha || hoy) + '"></label>'
+    + '<label class="campo"><span class="etiqueta">Lugar</span>'
+    + '  <input type="text" id="campo-lugar" placeholder="Ej. Casa comunal" value="' + esc(estado.lugar) + '"></label>'
+    + '<label class="campo"><span class="etiqueta">PDF escaneado (todas las hojas juntas)</span>'
+    + '  <input type="file" id="campo-pdf" accept="application/pdf"></label>'
+    + '<button class="btn btn-enviar" id="btn-leer">Leer con Gemini</button>';
+
+  document.querySelectorAll('.tipo-btn').forEach(function (b) {
+    b.addEventListener('click', function () {
+      estado.tipo = b.getAttribute('data-tipo');
+      document.querySelectorAll('.tipo-btn').forEach(function (x) { x.classList.remove('activo'); });
+      b.classList.add('activo');
+    });
+  });
+  document.getElementById('cambiar-identidad').addEventListener('click', function () {
+    borrarIdentidadLocal();
+    pantallaSelectorIdentidad('');
+  });
+  document.getElementById('btn-leer').addEventListener('click', validarYLeerPDF);
+}
+
+function validarYLeerPDF() {
+  const grupo = document.getElementById('campo-grupo').value.trim();
+  const fecha = document.getElementById('campo-fecha').value;
+  const lugar = document.getElementById('campo-lugar').value.trim();
+  const archivo = document.getElementById('campo-pdf').files[0];
+
+  if (!grupo || !fecha || !lugar) {
+    pantallaFormulario('<div class="aviso error"><b>Faltan datos</b>Completa grupo, fecha y lugar.</div>');
+    return;
+  }
+  if (!archivo) {
+    pantallaFormulario('<div class="aviso error"><b>Falta el PDF</b>Selecciona el archivo escaneado.</div>');
+    return;
+  }
+  if (archivo.size > 20 * 1024 * 1024) {
+    pantallaFormulario('<div class="aviso error"><b>El PDF pesa demasiado</b>Máximo 20 MB. Si el escaneo pesa más, avísale a Milton para resolverlo.</div>');
+    return;
+  }
+
+  estado.grupo = grupo; estado.fecha = fecha; estado.lugar = lugar;
+
+  pantallaCargando('Leyendo el PDF con Gemini — puede tardar unos segundos…');
+  leerArchivoComoBase64(archivo)
+    .then(function (pdfBase64) { return llamarBackend('leerPDFTaller', { pdfBase64: pdfBase64 }); })
+    .then(function (resp) {
+      if (!resp || !resp.exito) throw new Error((resp && resp.error) || 'Gemini no pudo leer el PDF.');
+      estado.hojas = resp.hojas || [];
+      pantallaRevision();
+    })
+    .catch(function (err) {
+      pantallaFormulario('<div class="aviso error"><b>No se pudo leer el PDF</b>' + esc(err.message) + '</div>');
+    });
+}
+
+// ==================================================== pantalla 3: cargando
+
+function pantallaCargando(mensaje) {
+  document.getElementById('contenido').innerHTML =
+    '<div class="titulo-pantalla"><span class="girando"></span>Un momento…</div>'
+    + '<p class="subtitulo">' + esc(mensaje) + '</p>';
+}
+
+// ==================================================== pantalla 4: revisión editable
+
+function opcionesRespuesta(valorActual) {
+  const opciones = [['', '— sin marca —'], ['POCO', 'Poco'], ['ALGO', 'Algo'], ['MUCHO', 'Mucho']];
+  return opciones.map(function (o) {
+    const sel = o[0] === (valorActual || '') ? ' selected' : '';
+    return '<option value="' + o[0] + '"' + sel + '>' + o[1] + '</option>';
+  }).join('');
+}
+
+function pantallaRevision(aviso) {
+  const cont = document.getElementById('contenido');
+  const tarjetas = estado.hojas.map(function (hoja, i) {
+    const marca = hoja.legible === false ? '<span class="marca-revisar">revisar</span>' : '';
+    const filas = [1, 2, 3].map(function (n) {
+      const campo = 'modulo' + n;
+      return '<div class="pregunta-fila"><span>' + esc(PREGUNTAS[n - 1]) + '</span>'
+        + '<select data-hoja="' + i + '" data-campo="' + campo + '">' + opcionesRespuesta(hoja[campo]) + '</select></div>';
+    }).join('');
+    return '<div class="hoja-card"><div class="hoja-card-cabeza"><b>Hoja ' + (hoja.numeroHoja || (i + 1)) + '</b>' + marca + '</div>' + filas + '</div>';
+  }).join('');
+
+  cont.innerHTML =
+    '<div class="titulo-pantalla">Revisa lo que leyó Gemini</div>'
+    + '<p class="subtitulo">' + estado.hojas.length + ' hoja(s) · ' + esc(estado.tipo) + ' · ' + esc(estado.grupo) + '. Corrige lo que haga falta antes de confirmar.</p>'
+    + (aviso || '')
+    + tarjetas
+    + '<button class="btn btn-enviar" id="btn-confirmar">Confirmar y guardar</button>'
+    + '<button class="btn btn-secundario" id="btn-volver">Volver a subir el PDF</button>';
+
+  cont.querySelectorAll('select[data-hoja]').forEach(function (sel) {
+    sel.addEventListener('change', function () {
+      const i = Number(sel.getAttribute('data-hoja'));
+      const campo = sel.getAttribute('data-campo');
+      estado.hojas[i][campo] = sel.value;
+    });
+  });
+  document.getElementById('btn-confirmar').addEventListener('click', confirmarGuardado);
+  document.getElementById('btn-volver').addEventListener('click', function () { pantallaFormulario(); });
+}
+
+// ==================================================== confirmar y guardar
+
+function confirmarGuardado() {
+  // legible se recalcula con lo que quedó después de la revisión, no con lo
+  // que Gemini dijo al inicio: si el trabajador social ya corrigió los
+  // vacíos, la hoja pasa a estar legible de verdad.
+  estado.hojas.forEach(function (h) {
+    h.legible = !!(h.modulo1 && h.modulo2 && h.modulo3);
+  });
+
+  pantallaCargando('Guardando en la matriz…');
+  llamarBackend('guardarResultadosTaller', {
+    grupo: estado.grupo,
+    fecha: estado.fecha,
+    lugar: estado.lugar,
+    localidad: NOMBRE_LOC[estado.identidad.loc],
+    rol: estado.identidad.rol,
+    tipo: estado.tipo,
+    hojas: JSON.stringify(estado.hojas)
+  })
+    .then(function (resp) {
+      if (!resp || !resp.exito) throw new Error((resp && resp.error) || 'No se pudo guardar.');
+      pantallaExito(resp);
+    })
+    .catch(function (err) {
+      pantallaRevision('<div class="aviso error"><b>No se pudo guardar</b>' + esc(err.message) + '</div>');
+    });
+}
+
+// ==================================================== pantalla final
+
+function pantallaExito(resp) {
+  document.getElementById('contenido').innerHTML =
+    '<div class="titulo-pantalla">Listo</div>'
+    + '<div class="aviso ok"><b>Guardado</b>' + esc(resp.mensaje || ('Jornada ' + resp.numeroJornada + ' guardada.')) + '</div>'
+    + '<button class="btn btn-enviar" id="btn-otra">Registrar otra jornada</button>';
+  document.getElementById('btn-otra').addEventListener('click', function () {
+    estado.grupo = ''; estado.fecha = ''; estado.lugar = ''; estado.hojas = [];
+    pantallaFormulario();
+  });
+}
+
+iniciar();
+</script>
+</body>
+</html>
