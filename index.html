@@ -112,13 +112,16 @@ function dibujar(encuestadores, sinConexion){
 function dibujarConfirmacion(identidad, avisoSinConexion){
   const cont = document.getElementById('contenido');
   cont.innerHTML =
-    '<div class="titulo-pantalla">Encuesta de satisfacción</div>'
+    '<div class="titulo-pantalla">Paz y Esperanza</div>'
     + avisoSinConexion
-    + '<p class="subtitulo">Vas a registrar respuestas como:</p>'
+    + '<p class="subtitulo">Vas a registrar como:</p>'
     + '<div class="quien"><b>' + esc(identidad.rol) + '</b>' + esc(NOMBRE_LOC[identidad.loc]) + '</div>'
-    + '<button class="btn btn-enviar" id="ir">Comenzar encuesta</button>'
+    + '<p class="subtitulo">¿Qué quieres abrir?</p>'
+    + '<button class="btn btn-enviar" id="ir-encuesta">Encuesta de satisfacción</button>'
+    + '<button class="btn btn-enviar" id="ir-taller">Evaluación de talleres</button>'
     + '<button class="enlace-tenue" id="cambiar">No soy yo — cambiar</button>';
-  document.getElementById('ir').addEventListener('click', function () { location.href = 'encuesta.html'; });
+  document.getElementById('ir-encuesta').addEventListener('click', function () { location.href = 'encuesta.html'; });
+  document.getElementById('ir-taller').addEventListener('click', function () { location.href = 'taller.html'; });
   document.getElementById('cambiar').addEventListener('click', function () {
     borrarIdentidadLocal(localStorage);
     dibujarSelector('');
