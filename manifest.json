@@ -1,7 +1,7 @@
 {
-  "name": "Encuesta de satisfacción — PyE",
-  "short_name": "Encuesta PyE",
-  "description": "Encuesta de satisfacción para el proyecto — indicador PM KOI",
+  "name": "Paz y Esperanza",
+  "short_name": "PyE",
+  "description": "Herramientas de campo — indicador de protección, evaluaciones Ex Ante/Ex Post",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",

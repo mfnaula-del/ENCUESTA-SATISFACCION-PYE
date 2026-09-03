@@ -3,12 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Encuesta de satisfacción</title>
+<title>Indicador de Protección</title>
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icono-192.png">
 <meta name="theme-color" content="#3F4A3C">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Encuesta PyE">
+<meta name="apple-mobile-web-app-title" content="Paz y Esperanza">
 <style>
 :root{
   --papel:#F5F4F0; --carta:#FFFFFF; --tinta:#1A1D1A;
@@ -148,14 +148,6 @@ function respuestasIniciales(preguntas) {
 function validarIdentificacion(id) {
   if (!String(id.documento || '').trim()) return 'Falta el número de documento.';
   if (!String(id.nombres || '').trim()) return 'Falta el nombre del beneficiario.';
-  return '';
-}
-function validarPreguntasElemento(preguntas, elemento, respuestas) {
-  const deEsteElemento = preguntas.filter(function (p) { return p.elemento === elemento; });
-  for (let i = 0; i < deEsteElemento.length; i++) {
-    if (!String(respuestas[deEsteElemento[i].id] || '').trim())
-      return 'Falta responder: ' + deEsteElemento[i].texto;
-  }
   return '';
 }
 function construirPayload(datos) {
@@ -480,10 +472,14 @@ function cablearEventos(){
 }
 
 async function avanzar(){
-  let error = '';
-  if (pantallaActual === 0) error = validarIdentificacion(estado.identificacion);
-  else error = validarPreguntasElemento(PREGUNTAS, ELEMENTOS_ORDEN[pantallaActual - 1], estado.respuestas);
-  if (error) { avisoActual = { tipo: 'error', titulo: 'Falta información', texto: error }; render(); return; }
+  // Las preguntas (1.1 a 4.2 y sus condicionales) ya no son obligatorias:
+  // alguna puede referirse a un servicio que la persona no recibió, y
+  // dejarla vacía es más honesto que forzar una respuesta o un "no
+  // contesta" que no corresponde. Solo identificación sigue validándose.
+  if (pantallaActual === 0) {
+    const error = validarIdentificacion(estado.identificacion);
+    if (error) { avisoActual = { tipo: 'error', titulo: 'Falta información', texto: error }; render(); return; }
+  }
   avisoActual = null;
 
   if (pantallaActual === 0) {

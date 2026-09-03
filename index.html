@@ -3,12 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Encuesta de satisfacción</title>
+<title>Paz y Esperanza</title>
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icono-192.png">
 <meta name="theme-color" content="#3F4A3C">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Encuesta PyE">
+<meta name="apple-mobile-web-app-title" content="Paz y Esperanza">
 <style>
 :root{
   --papel:#F5F4F0; --carta:#FFFFFF; --tinta:#1A1D1A;
@@ -20,6 +20,8 @@
 body{font-family:var(--sans);background:var(--papel);color:var(--tinta);
   padding:20px 16px;line-height:1.5}
 .envoltura{max-width:600px;margin:0 auto}
+.marca{text-align:center;font-weight:700;color:var(--oliva);font-size:14px;
+  letter-spacing:.03em;margin-bottom:10px}
 .carta{background:var(--carta);border:1px solid var(--linea);
   border-radius:12px;padding:16px}
 .btn{width:100%;padding:14px;border:0;border-radius:10px;font-size:15px;
@@ -44,6 +46,7 @@ body{font-family:var(--sans);background:var(--papel);color:var(--tinta);
 </head>
 <body>
 <div class="envoltura">
+  <div class="marca">Paz y Esperanza</div>
   <div class="carta" id="contenido"><p>Cargando…</p></div>
 </div>
 
@@ -58,6 +61,16 @@ const LOCALIDADES_SELECT = [
 ];
 const ROLES_SELECT = ['Trabajo social', 'Protección', 'Asistente humanitario', 'Psicología'];
 const NOMBRE_LOC = { MB: 'Manabí', G: 'Guayaquil', M: 'Milagro' };
+
+// Qué herramientas ve cada quien. 'roles: null' = visible para todos.
+// Cuando llegue la herramienta de Protección, se agrega aquí, igual que esta.
+const HERRAMIENTAS = [
+  { id: 'encuesta', nombre: 'Indicador de Protección', archivo: 'encuesta.html', roles: null },
+  { id: 'taller', nombre: 'Ex Ante y Ex Post — Trabajo social', archivo: 'taller.html', roles: ['Trabajo social'] }
+];
+function herramientasPara(rol) {
+  return HERRAMIENTAS.filter(function (h) { return !h.roles || h.roles.indexOf(rol) !== -1; });
+}
 
 function parametro(nombre){ return new URLSearchParams(location.search).get(nombre); }
 const esc = s => String(s ?? '').replace(/[&<>"]/g,
@@ -111,17 +124,17 @@ function dibujar(encuestadores, sinConexion){
 
 function dibujarConfirmacion(identidad, avisoSinConexion){
   const cont = document.getElementById('contenido');
+  const herramientas = herramientasPara(identidad.rol);
+  const botones = herramientas.map(function (h) {
+    return '<a class="btn btn-enviar" href="' + h.archivo + '" style="display:block;text-align:center;text-decoration:none;box-sizing:border-box">' + esc(h.nombre) + '</a>';
+  }).join('');
   cont.innerHTML =
-    '<div class="titulo-pantalla">Paz y Esperanza</div>'
+    '<div class="titulo-pantalla">¿Qué vas a registrar?</div>'
     + avisoSinConexion
-    + '<p class="subtitulo">Vas a registrar como:</p>'
+    + '<p class="subtitulo">Entrando como:</p>'
     + '<div class="quien"><b>' + esc(identidad.rol) + '</b>' + esc(NOMBRE_LOC[identidad.loc]) + '</div>'
-    + '<p class="subtitulo">¿Qué quieres abrir?</p>'
-    + '<button class="btn btn-enviar" id="ir-encuesta">Encuesta de satisfacción</button>'
-    + '<button class="btn btn-enviar" id="ir-taller">Evaluación de talleres</button>'
+    + botones
     + '<button class="enlace-tenue" id="cambiar">No soy yo — cambiar</button>';
-  document.getElementById('ir-encuesta').addEventListener('click', function () { location.href = 'encuesta.html'; });
-  document.getElementById('ir-taller').addEventListener('click', function () { location.href = 'taller.html'; });
   document.getElementById('cambiar').addEventListener('click', function () {
     borrarIdentidadLocal(localStorage);
     dibujarSelector('');
@@ -143,7 +156,7 @@ function dibujarSelector(avisoSinConexion){
     const loc = document.getElementById('sel-loc').value;
     const rol = document.getElementById('sel-rol').value;
     guardarIdentidadLocal(localStorage, loc, rol);
-    location.href = 'encuesta.html';
+    dibujarConfirmacion({ loc: loc, rol: rol }, '');
   });
 }
 
