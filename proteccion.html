@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sesiones Informativas — Protección</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icono-192.png">
+<meta name="theme-color" content="#3F4A3C">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Protección">
+<style>
+/* Mismas variables que index.html, para mantener la misma identidad visual. */
+:root{
+  --papel:#F5F4F0; --carta:#FFFFFF; --tinta:#1A1D1A;
+  --oliva:#3F4A3C; --linea:#E2E0DA; --apagado:#7A7C75;
+  --senal:#9B2C1F; --ambar:#B8860B;
+  --sans:-apple-system,'Segoe UI',system-ui,sans-serif;
+}
+body{font-family:var(--sans);background:var(--papel);color:var(--tinta);
+  padding:20px 16px;line-height:1.5}
+.envoltura{max-width:600px;margin:0 auto}
+.marca{text-align:center;font-weight:700;color:var(--oliva);font-size:14px;
+  letter-spacing:.03em;margin-bottom:10px}
+.carta{background:var(--carta);border:1px solid var(--linea);border-radius:12px;
+  padding:16px;margin-bottom:14px}
+.btn{width:100%;padding:14px;border:0;border-radius:10px;font-size:15px;
+  font-weight:600;font-family:inherit;cursor:pointer;margin-top:10px;box-sizing:border-box}
+.btn-enviar{background:var(--oliva);color:#fff}
+.btn-secundario{background:var(--papel);color:var(--oliva);border:1px solid var(--oliva)}
+.aviso{border-radius:9px;padding:12px 13px;margin-top:11px;font-size:13px;line-height:1.5}
+.aviso b{display:block;margin-bottom:4px}
+.aviso.ok{background:#E3EFE0;color:#2C351F}
+.aviso.error{background:#FBEBE8;color:#7B241A}
+.aviso.neutro{background:#FDF3E3;color:#5C4210}
+.titulo-pantalla{font-size:19px;font-weight:700;margin-bottom:4px}
+.subtitulo{font-size:13px;color:var(--apagado);margin-bottom:16px}
+.quien{border:1px solid var(--linea);border-radius:8px;padding:12px 13px;font-size:14px}
+.quien b{display:block;font-size:16px;margin-bottom:2px}
+.etiqueta{display:block;font-size:13px;font-weight:600;color:var(--oliva);margin:14px 0 6px}
+.etiqueta:first-child{margin-top:0}
+.campo select,.campo input,input[type="text"],input[type="number"],input[type="date"]{
+  width:100%;padding:11px 12px;border:1px solid var(--linea);border-radius:8px;
+  font-family:inherit;font-size:15px;color:var(--tinta);background:#fff;box-sizing:border-box}
+.fila3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.enlace-tenue{display:block;text-align:center;margin-top:16px;font-size:13px;color:var(--apagado);
+  text-decoration:underline;background:none;border:0;cursor:pointer;width:100%;font-family:inherit}
+.total-vivo{font-size:13px;color:var(--apagado);margin-top:6px;text-align:right}
+.total-vivo.mal{color:var(--senal);font-weight:600}
+</style>
+</head>
+<body>
+<div class="envoltura">
+  <div class="marca">Paz y Esperanza — Protección</div>
+  <div id="contenido"><p>Cargando…</p></div>
+</div>
+
+<script>
+const URL_BACKEND = 'https://script.google.com/macros/s/AKfycbwwss4qHQeZG0jdp3so4_kCihCKUb7AXTalfLlDKCXpll768TlMBYOR0s69ZD-4mecy/exec';
+
+// loc (de identidadLocal, guardado por index.html) -> nombre exacto de la
+// pestaña en el Sheets. Tiene que coincidir letra por letra con PESTANAS_VALIDAS
+// del backend.
+const PESTANA_POR_LOC = { MB: 'Protección Manabí', G: 'Protección Guayaquil', M: 'Protección Milagro' };
+
+// Solo Manabí pide cantón (varios posibles). Guayaquil y Milagro son cantón
+// único y fijo — no se pregunta.
+const CANTONES_POR_LOC = { MB: ['Manta', 'Montecristi', 'Jaramijo', 'Portoviejo'] };
+const CANTON_FIJO_POR_LOC = { G: 'Guayaquil', M: 'Milagro' };
+
+const TEMAS = ['PEAS', 'Cyberbullying', 'VBG', 'Familias constructivas y conflictivas', 'Crianza positiva', 'Nuevas masculinidades'];
+
+// Si el rol de Protección se renombra en index.html (a "Asistente humanitario
+// de protección" o el nombre final), cambia ÚNICAMENTE esta línea para que
+// coincida exactamente — si no coincide, esta página nunca se muestra.
+const ROL_ESPERADO = 'Protección';
+
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+function leerIdentidad() {
+  try { return JSON.parse(localStorage.getItem('identidadLocal') || 'null'); } catch (e) { return null; }
+}
+
+async function llamarBackend(cuerpo) {
+  const r = await fetch(URL_BACKEND, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify(cuerpo)
+  });
+  return r.json();
+}
+
+function iniciar() {
+  const cont = document.getElementById('contenido');
+  const identidad = leerIdentidad();
+
+  if (!identidad || identidad.rol !== ROL_ESPERADO) {
+    cont.innerHTML =
+      '<div class="carta"><div class="titulo-pantalla">Falta tu identidad</div>'
+      + '<div class="aviso error">Esta página es para el rol "' + esc(ROL_ESPERADO) + '". '
+      + 'Vuelve al inicio y elige tu localidad y área de trabajo.</div>'
+      + '<a class="btn btn-secundario" href="index.html" style="display:block;text-align:center;text-decoration:none;box-sizing:border-box">Volver al inicio</a></div>';
+    return;
+  }
+
+  const pestana = PESTANA_POR_LOC[identidad.loc];
+  dibujarMenu(identidad, pestana);
+}
+
+function dibujarMenu(identidad, pestana) {
+  const cont = document.getElementById('contenido');
+  cont.innerHTML =
+    '<div class="carta">'
+    + '<div class="quien"><b>' + esc(pestana) + '</b>Sesiones Informativas — Protección</div>'
+    + '<button class="btn btn-enviar" id="ir-pre">Registrar PRE (sesión nueva)</button>'
+    + '<button class="btn btn-secundario" id="ir-post">Registrar POST (sesión ya iniciada)</button>'
+    + '</div>';
+  document.getElementById('ir-pre').addEventListener('click', function () { dibujarFormularioPRE(identidad, pestana); });
+  document.getElementById('ir-post').addEventListener('click', function () { dibujarFormularioPOST(identidad, pestana); });
+}
+
+function filaConteo(prefijo, etiqueta) {
+  return '<span class="etiqueta">' + etiqueta + ' (Poco / Algo / Mucho)</span>'
+    + '<div class="fila3">'
+    + '<input type="number" min="0" max="20" id="' + prefijo + '-poco" placeholder="Poco">'
+    + '<input type="number" min="0" max="20" id="' + prefijo + '-algo" placeholder="Algo">'
+    + '<input type="number" min="0" max="20" id="' + prefijo + '-mucho" placeholder="Mucho">'
+    + '</div>'
+    + '<div class="total-vivo" id="' + prefijo + '-total">Total: 0 / 20</div>';
+}
+
+function activarTotalVivo(prefijo) {
+  function actualizar() {
+    const poco = Number(document.getElementById(prefijo + '-poco').value) || 0;
+    const algo = Number(document.getElementById(prefijo + '-algo').value) || 0;
+    const mucho = Number(document.getElementById(prefijo + '-mucho').value) || 0;
+    const total = poco + algo + mucho;
+    const el = document.getElementById(prefijo + '-total');
+    el.textContent = 'Total: ' + total + ' / 20';
+    el.className = 'total-vivo' + (total !== 20 ? ' mal' : '');
+  }
+  ['poco', 'algo', 'mucho'].forEach(function (s) {
+    document.getElementById(prefijo + '-' + s).addEventListener('input', actualizar);
+  });
+}
+
+function dibujarFormularioPRE(identidad, pestana) {
+  const cont = document.getElementById('contenido');
+  const hoy = new Date().toISOString().slice(0, 10);
+  const opcionesTema = TEMAS.map(function (t) { return '<option value="' + esc(t) + '">' + esc(t) + '</option>'; }).join('');
+
+  let campoCanton;
+  if (CANTONES_POR_LOC[identidad.loc]) {
+    const opciones = CANTONES_POR_LOC[identidad.loc].map(function (c) { return '<option value="' + esc(c) + '">' + esc(c) + '</option>'; }).join('');
+    campoCanton = '<label class="campo"><span class="etiqueta">Cantón</span><select id="canton">' + opciones + '</select></label>';
+  } else {
+    campoCanton = '<input type="hidden" id="canton" value="' + esc(CANTON_FIJO_POR_LOC[identidad.loc]) + '">';
+  }
+
+  cont.innerHTML =
+    '<div class="carta">'
+    + '<div class="titulo-pantalla">Registrar PRE</div>'
+    + '<p class="subtitulo">' + esc(pestana) + '</p>'
+    + '<label class="campo"><span class="etiqueta">N.º de sesión</span><input type="number" min="1" max="200" id="numero-sesion"></label>'
+    + '<label class="campo"><span class="etiqueta">Fecha</span><input type="date" id="fecha" value="' + hoy + '"></label>'
+    + campoCanton
+    + '<label class="campo"><span class="etiqueta">Sector / lugar de intervención</span><input type="text" id="sector" placeholder="Ej: Los Esteros"></label>'
+    + '<button class="btn btn-secundario" id="verificar-sigla">Verificar sigla del sector</button>'
+    + '<div id="resultado-sigla"></div>'
+    + '<label class="campo"><span class="etiqueta">Tema</span><select id="tema">' + opcionesTema + '</select></label>'
+    + filaConteo('pre', 'Conteo PRE')
+    + '<button class="btn btn-enviar" id="guardar-pre">Guardar PRE</button>'
+    + '<div id="resultado-pre"></div>'
+    + '<button class="enlace-tenue" id="volver">← Volver</button>'
+    + '</div>';
+
+  activarTotalVivo('pre');
+  document.getElementById('volver').addEventListener('click', function () { dibujarMenu(identidad, pestana); });
+
+  document.getElementById('verificar-sigla').addEventListener('click', async function () {
+    const sector = document.getElementById('sector').value.trim();
+    const cajaResultado = document.getElementById('resultado-sigla');
+    if (!sector) { cajaResultado.innerHTML = '<div class="aviso error">Escribe primero el nombre del sector.</div>'; return; }
+    cajaResultado.innerHTML = '<p class="subtitulo">Verificando…</p>';
+    try {
+      const d = await llamarBackend({ accion: 'sugerirSigla', pestana: pestana, sector: sector });
+      if (d.error) { cajaResultado.innerHTML = '<div class="aviso error">' + esc(d.error) + '</div>'; return; }
+      if (d.existe) {
+        cajaResultado.innerHTML = '<div class="aviso ok"><b>Ya está en el catálogo</b>Sigla: ' + esc(d.sigla) + '</div>';
+      } else {
+        cajaResultado.innerHTML =
+          '<div class="aviso neutro"><b>Sector nuevo</b>Sigla sugerida: ' + esc(d.sugerencia) + '. '
+          + 'Si prefieres otra, escríbela aquí (opcional):</div>'
+          + '<input type="text" id="sigla-propia" maxlength="6" placeholder="Ej: ' + esc(d.sugerencia) + '" style="margin-top:6px">';
+      }
+    } catch (err) {
+      cajaResultado.innerHTML = '<div class="aviso error">No se pudo verificar: ' + esc(err.message) + '</div>';
+    }
+  });
+
+  document.getElementById('guardar-pre').addEventListener('click', async function () {
+    const cajaResultado = document.getElementById('resultado-pre');
+    const numeroSesion = Number(document.getElementById('numero-sesion').value);
+    const fecha = document.getElementById('fecha').value;
+    const canton = document.getElementById('canton').value;
+    const sector = document.getElementById('sector').value.trim();
+    const tema = document.getElementById('tema').value;
+    const poco = Number(document.getElementById('pre-poco').value);
+    const algo = Number(document.getElementById('pre-algo').value);
+    const mucho = Number(document.getElementById('pre-mucho').value);
+    const siglaPropia = document.getElementById('sigla-propia');
+
+    if (!numeroSesion || !fecha || !sector) {
+      cajaResultado.innerHTML = '<div class="aviso error">Falta número de sesión, fecha o sector.</div>';
+      return;
+    }
+
+    cajaResultado.innerHTML = '<p class="subtitulo">Guardando…</p>';
+    try {
+      const d = await llamarBackend({
+        accion: 'escribirPRE', pestana: pestana, numeroSesion: numeroSesion, fecha: fecha,
+        canton: canton, sector: sector, tema: tema, poco: poco, algo: algo, mucho: mucho,
+        siglaPersonalizada: siglaPropia ? siglaPropia.value.trim() : ''
+      });
+      if (d.error) { cajaResultado.innerHTML = '<div class="aviso error">' + esc(d.error) + '</div>'; return; }
+      cajaResultado.innerHTML =
+        '<div class="aviso ok"><b>PRE guardado</b>Código de registro: ' + esc(d.codigoRegistro) + '<br>'
+        + 'Total: ' + esc(d.totalPre) + ' / 20 — Favorable: ' + Math.round(d.favorablePre * 100) + '%</div>';
+    } catch (err) {
+      cajaResultado.innerHTML = '<div class="aviso error">No se pudo guardar: ' + esc(err.message) + '</div>';
+    }
+  });
+}
+
+function dibujarFormularioPOST(identidad, pestana) {
+  const cont = document.getElementById('contenido');
+  cont.innerHTML =
+    '<div class="carta">'
+    + '<div class="titulo-pantalla">Registrar POST</div>'
+    + '<p class="subtitulo">' + esc(pestana) + '</p>'
+    + '<label class="campo"><span class="etiqueta">N.º de sesión</span><input type="number" min="1" max="200" id="numero-sesion"></label>'
+    + filaConteo('post', 'Conteo POST')
+    + '<button class="btn btn-enviar" id="guardar-post">Guardar POST</button>'
+    + '<div id="resultado-post"></div>'
+    + '<button class="enlace-tenue" id="volver">← Volver</button>'
+    + '</div>';
+
+  activarTotalVivo('post');
+  document.getElementById('volver').addEventListener('click', function () { dibujarMenu(identidad, pestana); });
+
+  document.getElementById('guardar-post').addEventListener('click', async function () {
+    const cajaResultado = document.getElementById('resultado-post');
+    const numeroSesion = Number(document.getElementById('numero-sesion').value);
+    const poco = Number(document.getElementById('post-poco').value);
+    const algo = Number(document.getElementById('post-algo').value);
+    const mucho = Number(document.getElementById('post-mucho').value);
+
+    if (!numeroSesion) { cajaResultado.innerHTML = '<div class="aviso error">Falta el número de sesión.</div>'; return; }
+
+    cajaResultado.innerHTML = '<p class="subtitulo">Guardando…</p>';
+    try {
+      const d = await llamarBackend({ accion: 'escribirPOST', pestana: pestana, numeroSesion: numeroSesion, poco: poco, algo: algo, mucho: mucho });
+      if (d.error) { cajaResultado.innerHTML = '<div class="aviso error">' + esc(d.error) + '</div>'; return; }
+      cajaResultado.innerHTML = '<div class="aviso ok"><b>POST guardado</b>' + esc(d.resultado) + '</div>';
+    } catch (err) {
+      cajaResultado.innerHTML = '<div class="aviso error">No se pudo guardar: ' + esc(err.message) + '</div>';
+    }
+  });
+}
+
+iniciar();
+
+if ('serviceWorker' in navigator && navigator.serviceWorker) {
+  try {
+    navigator.serviceWorker.register('sw.js').catch(function (err) {
+      console.warn('No se pudo activar el modo sin conexión:', err);
+    });
+  } catch (err) { console.warn('No se pudo activar el modo sin conexión:', err); }
+}
+</script>
+</body>
+</html>
