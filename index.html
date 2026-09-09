@@ -51,7 +51,7 @@ body{font-family:var(--sans);background:var(--papel);color:var(--tinta);
 </div>
 
 <script>
-const URL_BACKEND = 'https://script.google.com/macros/s/AKfycbwPONOVUJ4TKYJbowP9tlOeYWSyrpHYeFaZNgAd6rLousFVsCZVBXzyi-sMiBPRKyin/exec';
+const URL_BACKEND = 'PEGA_AQUI_LA_URL_/exec';
 
 // Localidades y roles en el orden en que se muestran. Los valores (loc/rol)
 // tienen que coincidir exactamente con los del backend (ENCUESTADORES en
@@ -59,14 +59,26 @@ const URL_BACKEND = 'https://script.google.com/macros/s/AKfycbwPONOVUJ4TKYJbowP9
 const LOCALIDADES_SELECT = [
   { cod: 'MB', nombre: 'Manabí' }, { cod: 'G', nombre: 'Guayaquil' }, { cod: 'M', nombre: 'Milagro' }
 ];
-const ROLES_SELECT = ['Trabajo social', 'Protección', 'Asistente humanitario', 'Psicología'];
+const ROLES_SELECT = ['Trabajador social de protección', 'Asistente humanitario de protección',
+                       'Asistente humanitario de gestión comunitaria', 'Psicólogo/a clínico'];
 const NOMBRE_LOC = { MB: 'Manabí', G: 'Guayaquil', M: 'Milagro' };
 
+// Los roles se renombraron; esto traduce lo que alguien ya tenga guardado en
+// su dispositivo con el nombre viejo, para que no le salga "no reconocido".
+const ROLES_ANTIGUOS_A_NUEVOS = {
+  'Trabajo social': 'Trabajador social de protección',
+  'Protección': 'Asistente humanitario de protección',
+  'Asistente humanitario': 'Asistente humanitario de gestión comunitaria',
+  'Psicología': 'Psicólogo/a clínico'
+};
+
 // Qué herramientas ve cada quien. 'roles: null' = visible para todos.
-// Cuando llegue la herramienta de Protección, se agrega aquí, igual que esta.
 const HERRAMIENTAS = [
   { id: 'encuesta', nombre: 'Indicador de Protección', archivo: 'encuesta.html', roles: null },
-  { id: 'taller', nombre: 'Ex Ante y Ex Post — Trabajo social', archivo: 'taller.html', roles: ['Trabajo social'] }
+  { id: 'taller', nombre: 'Ex Ante y Ex Post — Trabajo social', archivo: 'taller.html', roles: ['Trabajador social de protección'] },
+  { id: 'proteccion', nombre: 'Sesiones Informativas — Protección', archivo: 'proteccion.html', roles: ['Asistente humanitario de protección'] }
+  // Pendiente: una herramienta para "Asistente humanitario de gestión
+  // comunitaria" — se agrega aquí cuando esté lista, con la misma lógica.
 ];
 function herramientasPara(rol) {
   return HERRAMIENTAS.filter(function (h) { return !h.roles || h.roles.indexOf(rol) !== -1; });
@@ -86,7 +98,11 @@ function buscarCodigo(encuestadores, loc, rol) {
   return null;
 }
 function leerIdentidadLocal(storage) {
-  try { return JSON.parse(storage.getItem('identidadLocal') || 'null'); } catch (e) { return null; }
+  try {
+    const id = JSON.parse(storage.getItem('identidadLocal') || 'null');
+    if (id && ROLES_ANTIGUOS_A_NUEVOS[id.rol]) id.rol = ROLES_ANTIGUOS_A_NUEVOS[id.rol];
+    return id;
+  } catch (e) { return null; }
 }
 function guardarIdentidadLocal(storage, loc, rol) { storage.setItem('identidadLocal', JSON.stringify({ loc, rol })); }
 function borrarIdentidadLocal(storage) { storage.removeItem('identidadLocal'); }

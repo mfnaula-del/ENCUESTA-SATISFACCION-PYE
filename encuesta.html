@@ -70,7 +70,7 @@ body{font-family:var(--sans);background:var(--papel);color:var(--tinta);
 </div>
 
 <script>
-const URL_BACKEND = 'https://script.google.com/macros/s/AKfycbwPONOVUJ4TKYJbowP9tlOeYWSyrpHYeFaZNgAd6rLousFVsCZVBXzyi-sMiBPRKyin/exec';
+const URL_BACKEND = 'PEGA_AQUI_LA_URL_/exec';
 
 function parametro(nombre){ return new URLSearchParams(location.search).get(nombre); }
 let PROF = null;   // se determina en arrancar(): identidad guardada, o ?prof= como excepción puntual
@@ -146,7 +146,8 @@ function respuestasIniciales(preguntas) {
   return r;
 }
 function validarIdentificacion(id) {
-  if (!String(id.documento || '').trim()) return 'Falta el número de documento.';
+  // Documento y celular ya no son obligatorios: a veces se aplica a un niño
+  // o niña que no sabe o no tiene su número de cédula.
   if (!String(id.nombres || '').trim()) return 'Falta el nombre del beneficiario.';
   return '';
 }

@@ -47,6 +47,17 @@ body{font-family:var(--sans);background:var(--papel);color:var(--tinta);
   text-decoration:underline;background:none;border:0;cursor:pointer;width:100%;font-family:inherit}
 .total-vivo{font-size:13px;color:var(--apagado);margin-top:6px;text-align:right}
 .total-vivo.mal{color:var(--senal);font-weight:600}
+.hoja-card{border:1px solid var(--linea);border-radius:10px;padding:12px 13px;margin-top:12px}
+.hoja-card-cabeza{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.hoja-card-cabeza b{font-size:14px}
+.marca-revisar{font-size:11px;font-weight:600;color:var(--ambar);background:#FDF3E3;
+  padding:3px 8px;border-radius:20px}
+.pregunta-fila select{width:100%;padding:9px 10px;border:1px solid var(--linea);border-radius:7px;
+  font-family:inherit;font-size:14px;background:#fff}
+.girando{display:inline-block;width:16px;height:16px;border:2px solid var(--linea);
+  border-top-color:var(--oliva);border-radius:50%;animation:girar 0.8s linear infinite;
+  vertical-align:middle;margin-right:8px}
+@keyframes girar{to{transform:rotate(360deg)}}
 </style>
 </head>
 <body>
@@ -63,17 +74,20 @@ const URL_BACKEND = 'https://script.google.com/macros/s/AKfycbwwss4qHQeZG0jdp3so
 // del backend.
 const PESTANA_POR_LOC = { MB: 'Protección Manabí', G: 'Protección Guayaquil', M: 'Protección Milagro' };
 
-// Solo Manabí pide cantón (varios posibles). Guayaquil y Milagro son cantón
-// único y fijo — no se pregunta.
-const CANTONES_POR_LOC = { MB: ['Manta', 'Montecristi', 'Jaramijo', 'Portoviejo'] };
-const CANTON_FIJO_POR_LOC = { G: 'Guayaquil', M: 'Milagro' };
+// Cantones por localidad, misma forma en las tres herramientas: un arreglo
+// por código de localidad. Si tiene más de un cantón, se pregunta cuál; si
+// solo tiene uno, la localidad ES el cantón y no se pregunta.
+const CANTONES_POR_LOC = {
+  MB: ['Manta', 'Montecristi', 'Jaramijo', 'Portoviejo'],
+  G: ['Guayaquil'],
+  M: ['Milagro']
+};
 
 const TEMAS = ['PEAS', 'Cyberbullying', 'VBG', 'Familias constructivas y conflictivas', 'Crianza positiva', 'Nuevas masculinidades'];
 
-// Si el rol de Protección se renombra en index.html (a "Asistente humanitario
-// de protección" o el nombre final), cambia ÚNICAMENTE esta línea para que
-// coincida exactamente — si no coincide, esta página nunca se muestra.
-const ROL_ESPERADO = 'Protección';
+// Tiene que coincidir letra por letra con el rol usado en index.html y con
+// los ENCUESTADORES del backend de la encuesta.
+const ROL_ESPERADO = 'Asistente humanitario de protección';
 
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
@@ -119,29 +133,25 @@ function dibujarMenu(identidad, pestana) {
   document.getElementById('ir-post').addEventListener('click', function () { dibujarFormularioPOST(identidad, pestana); });
 }
 
-function filaConteo(prefijo, etiqueta) {
-  return '<span class="etiqueta">' + etiqueta + ' (Poco / Algo / Mucho)</span>'
-    + '<div class="fila3">'
-    + '<input type="number" min="0" max="20" id="' + prefijo + '-poco" placeholder="Poco">'
-    + '<input type="number" min="0" max="20" id="' + prefijo + '-algo" placeholder="Algo">'
-    + '<input type="number" min="0" max="20" id="' + prefijo + '-mucho" placeholder="Mucho">'
-    + '</div>'
-    + '<div class="total-vivo" id="' + prefijo + '-total">Total: 0 / 20</div>';
+function leerArchivoComoBase64(archivo) {
+  return new Promise(function (resolve, reject) {
+    const lector = new FileReader();
+    lector.onload = function () {
+      const resultado = String(lector.result || '');
+      const coma = resultado.indexOf(',');
+      resolve(coma >= 0 ? resultado.slice(coma + 1) : resultado);
+    };
+    lector.onerror = function () { reject(new Error('No se pudo leer el archivo del celular.')); };
+    lector.readAsDataURL(archivo);
+  });
 }
 
-function activarTotalVivo(prefijo) {
-  function actualizar() {
-    const poco = Number(document.getElementById(prefijo + '-poco').value) || 0;
-    const algo = Number(document.getElementById(prefijo + '-algo').value) || 0;
-    const mucho = Number(document.getElementById(prefijo + '-mucho').value) || 0;
-    const total = poco + algo + mucho;
-    const el = document.getElementById(prefijo + '-total');
-    el.textContent = 'Total: ' + total + ' / 20';
-    el.className = 'total-vivo' + (total !== 20 ? ' mal' : '');
-  }
-  ['poco', 'algo', 'mucho'].forEach(function (s) {
-    document.getElementById(prefijo + '-' + s).addEventListener('input', actualizar);
-  });
+function opcionesRespuesta(valorActual) {
+  const opciones = [['', '— sin marca —'], ['POCO', 'Poco'], ['ALGO', 'Algo'], ['MUCHO', 'Mucho']];
+  return opciones.map(function (o) {
+    const sel = o[0] === (valorActual || '') ? ' selected' : '';
+    return '<option value="' + o[0] + '"' + sel + '>' + o[1] + '</option>';
+  }).join('');
 }
 
 function dibujarFormularioPRE(identidad, pestana) {
@@ -150,17 +160,18 @@ function dibujarFormularioPRE(identidad, pestana) {
   const opcionesTema = TEMAS.map(function (t) { return '<option value="' + esc(t) + '">' + esc(t) + '</option>'; }).join('');
 
   let campoCanton;
-  if (CANTONES_POR_LOC[identidad.loc]) {
-    const opciones = CANTONES_POR_LOC[identidad.loc].map(function (c) { return '<option value="' + esc(c) + '">' + esc(c) + '</option>'; }).join('');
+  const cantones = CANTONES_POR_LOC[identidad.loc] || [];
+  if (cantones.length > 1) {
+    const opciones = cantones.map(function (c) { return '<option value="' + esc(c) + '">' + esc(c) + '</option>'; }).join('');
     campoCanton = '<label class="campo"><span class="etiqueta">Cantón</span><select id="canton">' + opciones + '</select></label>';
   } else {
-    campoCanton = '<input type="hidden" id="canton" value="' + esc(CANTON_FIJO_POR_LOC[identidad.loc]) + '">';
+    campoCanton = '<input type="hidden" id="canton" value="' + esc(cantones[0] || '') + '">';
   }
 
   cont.innerHTML =
     '<div class="carta">'
     + '<div class="titulo-pantalla">Registrar PRE</div>'
-    + '<p class="subtitulo">' + esc(pestana) + '</p>'
+    + '<p class="subtitulo">' + esc(pestana) + ' — sube el PDF con los recortes PRE de esta sesión (uno por participante).</p>'
     + '<label class="campo"><span class="etiqueta">N.º de sesión</span><input type="number" min="1" max="200" id="numero-sesion"></label>'
     + '<label class="campo"><span class="etiqueta">Fecha</span><input type="date" id="fecha" value="' + hoy + '"></label>'
     + campoCanton
@@ -168,13 +179,12 @@ function dibujarFormularioPRE(identidad, pestana) {
     + '<button class="btn btn-secundario" id="verificar-sigla">Verificar sigla del sector</button>'
     + '<div id="resultado-sigla"></div>'
     + '<label class="campo"><span class="etiqueta">Tema</span><select id="tema">' + opcionesTema + '</select></label>'
-    + filaConteo('pre', 'Conteo PRE')
-    + '<button class="btn btn-enviar" id="guardar-pre">Guardar PRE</button>'
+    + '<label class="campo"><span class="etiqueta">PDF escaneado (todos los recortes PRE juntos)</span><input type="file" id="campo-pdf" accept="application/pdf"></label>'
+    + '<button class="btn btn-enviar" id="btn-leer">Leer con Gemini</button>'
     + '<div id="resultado-pre"></div>'
     + '<button class="enlace-tenue" id="volver">← Volver</button>'
     + '</div>';
 
-  activarTotalVivo('pre');
   document.getElementById('volver').addEventListener('click', function () { dibujarMenu(identidad, pestana); });
 
   document.getElementById('verificar-sigla').addEventListener('click', async function () {
@@ -198,36 +208,39 @@ function dibujarFormularioPRE(identidad, pestana) {
     }
   });
 
-  document.getElementById('guardar-pre').addEventListener('click', async function () {
+  document.getElementById('btn-leer').addEventListener('click', async function () {
     const cajaResultado = document.getElementById('resultado-pre');
     const numeroSesion = Number(document.getElementById('numero-sesion').value);
     const fecha = document.getElementById('fecha').value;
     const canton = document.getElementById('canton').value;
     const sector = document.getElementById('sector').value.trim();
     const tema = document.getElementById('tema').value;
-    const poco = Number(document.getElementById('pre-poco').value);
-    const algo = Number(document.getElementById('pre-algo').value);
-    const mucho = Number(document.getElementById('pre-mucho').value);
+    const archivo = document.getElementById('campo-pdf').files[0];
     const siglaPropia = document.getElementById('sigla-propia');
 
     if (!numeroSesion || !fecha || !sector) {
       cajaResultado.innerHTML = '<div class="aviso error">Falta número de sesión, fecha o sector.</div>';
       return;
     }
+    if (!archivo) { cajaResultado.innerHTML = '<div class="aviso error">Falta el PDF con los recortes.</div>'; return; }
+    if (archivo.size > 20 * 1024 * 1024) {
+      cajaResultado.innerHTML = '<div class="aviso error">El PDF pesa demasiado. Máximo 20 MB.</div>';
+      return;
+    }
 
-    cajaResultado.innerHTML = '<p class="subtitulo">Guardando…</p>';
+    const datosSesion = {
+      tipo: 'PRE', numeroSesion: numeroSesion, fecha: fecha, canton: canton, sector: sector, tema: tema,
+      siglaPersonalizada: siglaPropia ? siglaPropia.value.trim() : ''
+    };
+
+    cajaResultado.innerHTML = '<p class="subtitulo"><span class="girando"></span>Leyendo el PDF con Gemini — puede tardar unos segundos…</p>';
     try {
-      const d = await llamarBackend({
-        accion: 'escribirPRE', pestana: pestana, numeroSesion: numeroSesion, fecha: fecha,
-        canton: canton, sector: sector, tema: tema, poco: poco, algo: algo, mucho: mucho,
-        siglaPersonalizada: siglaPropia ? siglaPropia.value.trim() : ''
-      });
-      if (d.error) { cajaResultado.innerHTML = '<div class="aviso error">' + esc(d.error) + '</div>'; return; }
-      cajaResultado.innerHTML =
-        '<div class="aviso ok"><b>PRE guardado</b>Código de registro: ' + esc(d.codigoRegistro) + '<br>'
-        + 'Total: ' + esc(d.totalPre) + ' / 20 — Favorable: ' + Math.round(d.favorablePre * 100) + '%</div>';
+      const pdfBase64 = await leerArchivoComoBase64(archivo);
+      const resp = await llamarBackend({ accion: 'leerPDFSesionInformativa', pdfBase64: pdfBase64, tema: tema });
+      if (!resp || !resp.exito) throw new Error((resp && resp.error) || 'Gemini no pudo leer el PDF.');
+      pantallaRevisionSesion(identidad, pestana, datosSesion, resp.hojas || []);
     } catch (err) {
-      cajaResultado.innerHTML = '<div class="aviso error">No se pudo guardar: ' + esc(err.message) + '</div>';
+      cajaResultado.innerHTML = '<div class="aviso error"><b>No se pudo leer el PDF</b>' + esc(err.message) + '</div>';
     }
   });
 }
@@ -237,31 +250,107 @@ function dibujarFormularioPOST(identidad, pestana) {
   cont.innerHTML =
     '<div class="carta">'
     + '<div class="titulo-pantalla">Registrar POST</div>'
-    + '<p class="subtitulo">' + esc(pestana) + '</p>'
+    + '<p class="subtitulo">' + esc(pestana) + ' — sube el PDF con los recortes POST de esta sesión.</p>'
     + '<label class="campo"><span class="etiqueta">N.º de sesión</span><input type="number" min="1" max="200" id="numero-sesion"></label>'
-    + filaConteo('post', 'Conteo POST')
-    + '<button class="btn btn-enviar" id="guardar-post">Guardar POST</button>'
+    + '<label class="campo"><span class="etiqueta">PDF escaneado (todos los recortes POST juntos)</span><input type="file" id="campo-pdf" accept="application/pdf"></label>'
+    + '<button class="btn btn-enviar" id="btn-leer">Leer con Gemini</button>'
     + '<div id="resultado-post"></div>'
     + '<button class="enlace-tenue" id="volver">← Volver</button>'
     + '</div>';
 
-  activarTotalVivo('post');
   document.getElementById('volver').addEventListener('click', function () { dibujarMenu(identidad, pestana); });
 
-  document.getElementById('guardar-post').addEventListener('click', async function () {
+  document.getElementById('btn-leer').addEventListener('click', async function () {
     const cajaResultado = document.getElementById('resultado-post');
     const numeroSesion = Number(document.getElementById('numero-sesion').value);
-    const poco = Number(document.getElementById('post-poco').value);
-    const algo = Number(document.getElementById('post-algo').value);
-    const mucho = Number(document.getElementById('post-mucho').value);
+    const archivo = document.getElementById('campo-pdf').files[0];
 
     if (!numeroSesion) { cajaResultado.innerHTML = '<div class="aviso error">Falta el número de sesión.</div>'; return; }
+    if (!archivo) { cajaResultado.innerHTML = '<div class="aviso error">Falta el PDF con los recortes.</div>'; return; }
+    if (archivo.size > 20 * 1024 * 1024) { cajaResultado.innerHTML = '<div class="aviso error">El PDF pesa demasiado. Máximo 20 MB.</div>'; return; }
 
+    cajaResultado.innerHTML = '<p class="subtitulo">Consultando la sesión…</p>';
+    try {
+      const sesion = await llamarBackend({ accion: 'buscarSesion', pestana: pestana, numeroSesion: numeroSesion });
+      if (sesion.error) throw new Error(sesion.error);
+      if (!sesion.tema) throw new Error('Esta sesión no tiene PRE cargado todavía. Sube el PRE primero.');
+
+      cajaResultado.innerHTML = '<p class="subtitulo"><span class="girando"></span>Leyendo el PDF con Gemini — puede tardar unos segundos…</p>';
+      const pdfBase64 = await leerArchivoComoBase64(archivo);
+      const resp = await llamarBackend({ accion: 'leerPDFSesionInformativa', pdfBase64: pdfBase64, tema: sesion.tema });
+      if (!resp || !resp.exito) throw new Error((resp && resp.error) || 'Gemini no pudo leer el PDF.');
+      pantallaRevisionSesion(identidad, pestana, { tipo: 'POST', numeroSesion: numeroSesion }, resp.hojas || []);
+    } catch (err) {
+      cajaResultado.innerHTML = '<div class="aviso error"><b>No se pudo continuar</b>' + esc(err.message) + '</div>';
+    }
+  });
+}
+
+function pantallaRevisionSesion(identidad, pestana, datosSesion, hojas) {
+  const cont = document.getElementById('contenido');
+
+  const tarjetas = hojas.map(function (hoja, i) {
+    const marca = hoja.legible === false ? '<span class="marca-revisar">revisar</span>' : '';
+    return '<div class="hoja-card"><div class="hoja-card-cabeza"><b>Hoja ' + (hoja.numeroHoja || (i + 1)) + '</b>' + marca + '</div>'
+      + '<div class="pregunta-fila"><select data-hoja="' + i + '">' + opcionesRespuesta(hoja.respuesta) + '</select></div>'
+      + '</div>';
+  }).join('');
+
+  cont.innerHTML =
+    '<div class="carta">'
+    + '<div class="titulo-pantalla">Revisa lo que leyó Gemini</div>'
+    + '<p class="subtitulo">' + hojas.length + ' hoja(s) · ' + esc(datosSesion.tipo) + ' · sesión ' + esc(datosSesion.numeroSesion) + '. Corrige lo que haga falta antes de confirmar.</p>'
+    + '<div class="total-vivo" id="resumen-conteo"></div>'
+    + tarjetas
+    + '<button class="btn btn-enviar" id="btn-confirmar">Confirmar y guardar</button>'
+    + '<button class="btn btn-secundario" id="btn-volver-form">Volver a subir el PDF</button>'
+    + '<div id="resultado-revision"></div>'
+    + '</div>';
+
+  function actualizarResumen() {
+    const c = { POCO: 0, ALGO: 0, MUCHO: 0, '': 0 };
+    hojas.forEach(function (h) { const v = h.respuesta || ''; c[v] = (c[v] || 0) + 1; });
+    document.getElementById('resumen-conteo').textContent =
+      'Poco: ' + c.POCO + ' — Algo: ' + c.ALGO + ' — Mucho: ' + c.MUCHO + ' — sin marca: ' + c[''];
+  }
+  actualizarResumen();
+
+  cont.querySelectorAll('select[data-hoja]').forEach(function (sel) {
+    sel.addEventListener('change', function () {
+      hojas[Number(sel.getAttribute('data-hoja'))].respuesta = sel.value;
+      actualizarResumen();
+    });
+  });
+
+  document.getElementById('btn-volver-form').addEventListener('click', function () {
+    if (datosSesion.tipo === 'PRE') dibujarFormularioPRE(identidad, pestana);
+    else dibujarFormularioPOST(identidad, pestana);
+  });
+
+  document.getElementById('btn-confirmar').addEventListener('click', async function () {
+    const cajaResultado = document.getElementById('resultado-revision');
     cajaResultado.innerHTML = '<p class="subtitulo">Guardando…</p>';
     try {
-      const d = await llamarBackend({ accion: 'escribirPOST', pestana: pestana, numeroSesion: numeroSesion, poco: poco, algo: algo, mucho: mucho });
+      const cuerpoBase = {
+        accion: datosSesion.tipo === 'PRE' ? 'escribirPRE' : 'escribirPOST',
+        pestana: pestana, numeroSesion: datosSesion.numeroSesion, rol: identidad.rol,
+        poco: 0, algo: 0, mucho: 0, hojas: JSON.stringify(hojas)
+      };
+      const cuerpo = datosSesion.tipo === 'PRE'
+        ? Object.assign(cuerpoBase, { fecha: datosSesion.fecha, canton: datosSesion.canton, sector: datosSesion.sector, tema: datosSesion.tema, siglaPersonalizada: datosSesion.siglaPersonalizada })
+        : cuerpoBase;
+
+      const d = await llamarBackend(cuerpo);
       if (d.error) { cajaResultado.innerHTML = '<div class="aviso error">' + esc(d.error) + '</div>'; return; }
-      cajaResultado.innerHTML = '<div class="aviso ok"><b>POST guardado</b>' + esc(d.resultado) + '</div>';
+
+      const total = datosSesion.tipo === 'PRE' ? d.totalPre : d.totalPost;
+      cont.innerHTML =
+        '<div class="carta"><div class="titulo-pantalla">Listo</div>'
+        + '<div class="aviso ok"><b>' + esc(datosSesion.tipo) + ' guardado</b>'
+        + (d.codigoRegistro ? 'Código de registro: ' + esc(d.codigoRegistro) + '<br>' : '')
+        + 'Total marcado: ' + esc(total) + ' / 20</div>'
+        + '<button class="btn btn-enviar" id="btn-otra">Registrar otra sesión</button></div>';
+      document.getElementById('btn-otra').addEventListener('click', function () { dibujarMenu(identidad, pestana); });
     } catch (err) {
       cajaResultado.innerHTML = '<div class="aviso error">No se pudo guardar: ' + esc(err.message) + '</div>';
     }
