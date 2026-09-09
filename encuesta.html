@@ -83,8 +83,22 @@ function buscarCodigo(encuestadores, loc, rol) {
   }
   return null;
 }
+// Mismo mapa que index.html: si el dispositivo guardó un rol con el nombre
+// viejo (antes de renombrar los roles), se traduce aquí también — si no,
+// esta pantalla nunca lo reconoce aunque el usuario ya haya elegido su
+// identidad en la página principal.
+const ROLES_ANTIGUOS_A_NUEVOS = {
+  'Trabajo social': 'Trabajador social de protección',
+  'Protección': 'Asistente humanitario de protección',
+  'Asistente humanitario': 'Asistente humanitario de gestión comunitaria',
+  'Psicología': 'Psicólogo/a clínico'
+};
 function leerIdentidadLocal(storage) {
-  try { return JSON.parse(storage.getItem('identidadLocal') || 'null'); } catch (e) { return null; }
+  try {
+    const id = JSON.parse(storage.getItem('identidadLocal') || 'null');
+    if (id && ROLES_ANTIGUOS_A_NUEVOS[id.rol]) id.rol = ROLES_ANTIGUOS_A_NUEVOS[id.rol];
+    return id;
+  } catch (e) { return null; }
 }
 function resolverProf(encuestadores, storage, profUrl) {
   const u = String(profUrl || '').toUpperCase();
@@ -279,8 +293,13 @@ async function arrancar(){
 
 function mostrarFaltaIdentidad(){
   const cont = document.getElementById('contenido');
+  const identidad = leerIdentidadLocal(localStorage);
+  const aviso = identidad
+    ? 'Este dispositivo tiene guardado "' + esc(identidad.rol) + '" en ' + esc(identidad.loc)
+      + ', pero no coincide con ningún área reconocida por el sistema. Vuelve a elegir tu localidad y rol en la página principal.'
+    : 'Este dispositivo todavía no tiene una localidad y área guardadas.';
   cont.innerHTML = '<div class="titulo-pantalla">Falta elegir quién eres</div>'
-    + '<div class="aviso neutro">Este dispositivo todavía no tiene una localidad y área guardadas.</div>'
+    + '<div class="aviso neutro">' + aviso + '</div>'
     + '<a class="btn btn-enviar" style="display:block;text-align:center;text-decoration:none;box-sizing:border-box" href="index.html">Elegir en la página principal</a>';
 }
 

@@ -35,8 +35,11 @@ body{font-family:var(--sans);background:var(--papel);color:var(--tinta);
 .aviso.neutro{background:#FDF3E3;color:#5C4210}
 .titulo-pantalla{font-size:19px;font-weight:700;margin-bottom:4px}
 .subtitulo{font-size:13px;color:var(--apagado);margin-bottom:16px}
-.quien{border:1px solid var(--linea);border-radius:8px;padding:12px 13px;font-size:14px}
-.quien b{display:block;font-size:16px;margin-bottom:2px}
+.quien{border:1px solid var(--linea);border-radius:8px;padding:12px 13px;font-size:14px;
+  display:flex;justify-content:space-between;align-items:center}
+.quien b{font-size:16px}
+.quien button{background:none;border:0;color:var(--apagado);text-decoration:underline;
+  font-size:12px;font-family:inherit;cursor:pointer;padding:0}
 .etiqueta{display:block;font-size:13px;font-weight:600;color:var(--oliva);margin:14px 0 6px}
 .etiqueta:first-child{margin-top:0}
 .campo select,.campo input,input[type="text"],input[type="number"],input[type="date"]{
@@ -94,6 +97,7 @@ const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;
 function leerIdentidad() {
   try { return JSON.parse(localStorage.getItem('identidadLocal') || 'null'); } catch (e) { return null; }
 }
+function borrarIdentidad() { localStorage.removeItem('identidadLocal'); }
 
 async function llamarBackend(cuerpo) {
   const r = await fetch(URL_BACKEND, {
@@ -125,12 +129,17 @@ function dibujarMenu(identidad, pestana) {
   const cont = document.getElementById('contenido');
   cont.innerHTML =
     '<div class="carta">'
-    + '<div class="quien"><b>' + esc(pestana) + '</b>Sesiones Informativas — Protección</div>'
+    + '<div class="quien"><span><b>' + esc(pestana) + '</b><br>Sesiones Informativas — Protección</span>'
+    + '<button id="cambiar-identidad">no soy yo</button></div>'
     + '<button class="btn btn-enviar" id="ir-pre">Registrar PRE (sesión nueva)</button>'
     + '<button class="btn btn-secundario" id="ir-post">Registrar POST (sesión ya iniciada)</button>'
     + '</div>';
   document.getElementById('ir-pre').addEventListener('click', function () { dibujarFormularioPRE(identidad, pestana); });
   document.getElementById('ir-post').addEventListener('click', function () { dibujarFormularioPOST(identidad, pestana); });
+  document.getElementById('cambiar-identidad').addEventListener('click', function () {
+    borrarIdentidad();
+    location.href = 'index.html';
+  });
 }
 
 function leerArchivoComoBase64(archivo) {

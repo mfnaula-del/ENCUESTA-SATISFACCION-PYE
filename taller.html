@@ -109,9 +109,30 @@ const CANTONES_POR_LOC = {
   G: ['Guayaquil'],
   M: ['Milagro']
 };
+// Mismas siglas de cantón que ya usa el backend (generarCodigoRegistro) —
+// solo para que la vista previa del código coincida con lo que se guardará.
+const CANTON_A_SIGLA = {
+  Manta: 'MT', Montecristi: 'MC', Jaramijo: 'JJ', Portoviejo: 'PT',
+  Guayaquil: 'G', Milagro: 'M'
+};
 
 const esc = s => String(s ?? '').replace(/[&<>"]/g,
   c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+// Genera un código de grupo legible a partir de localidad+cantón+sector (sin
+// fecha, para que el PRE y el POST del mismo grupo -aunque se hagan en días
+// distintos- siempre produzcan el mismo texto y coincidan en la misma
+// jornada). Solo se usa si el colega deja el campo de nombre vacío.
+function limpiarParaCodigo(s) {
+  return String(s || '').trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^A-Za-z0-9]+/g, '').toUpperCase();
+}
+function codigoGrupoAutomatico(locCodigo, canton, sector) {
+  const partes = [locCodigo];
+  if (canton) partes.push(limpiarParaCodigo(canton));
+  partes.push(limpiarParaCodigo(sector));
+  return partes.filter(Boolean).join('-');
+}
 
 function leerIdentidadLocal() {
   try { return JSON.parse(localStorage.getItem('identidadLocal') || 'null'); } catch (e) { return null; }
@@ -124,7 +145,7 @@ const estado = {
   pestana: '',            // Manabí / Guayaquil / Milagro — se deriva de la identidad
   modo: 'INTENSIVO',      // 'INTENSIVO' | 'POR_SESION'
   origenGrupo: 'NUEVO',   // 'NUEVO' | 'EXISTENTE' (solo aplica en Por sesión)
-  grupo: '', fecha: '', canton: '', sector: '',
+  grupo: '', fecha: '', canton: '', sector: '', siglaSector: '',
   numeroModulo: 1,
   tipo: 'PRE',
   jornadasExistentes: [],
@@ -202,9 +223,7 @@ function pantallaFormulario(aviso) {
 
   if (estado.modo === 'INTENSIVO') {
     html +=
-      '<label class="campo"><span class="etiqueta">Código o nombre del grupo</span>'
-      + '  <input type="text" id="campo-grupo" placeholder="Ej. Grupo A - Manta" value="' + esc(estado.grupo) + '"></label>'
-      + '<span class="etiqueta">Tipo</span>'
+      '<span class="etiqueta">Tipo</span>'
       + '<div class="grupo-btn">'
       + '  <button type="button" class="tipo-btn' + (estado.tipo === 'PRE' ? ' activo' : '') + '" data-tipo="PRE">Ex Ante (PRE)</button>'
       + '  <button type="button" class="tipo-btn' + (estado.tipo === 'POST' ? ' activo' : '') + '" data-tipo="POST">Ex Post (POST)</button>'
@@ -218,6 +237,9 @@ function pantallaFormulario(aviso) {
           : '')
       + '<label class="campo"><span class="etiqueta">Sector</span>'
       + '  <input type="text" id="campo-sector" placeholder="Ej. Los Esteros" value="' + esc(estado.sector) + '"></label>'
+      + '<button type="button" class="btn btn-secundario" id="verificar-sigla">Verificar sigla del sector</button>'
+      + '<div id="resultado-sigla"></div>'
+      + '<div class="aviso neutro" id="preview-codigo" style="display:none"></div>'
       + '<label class="campo"><span class="etiqueta">PDF escaneado (todas las hojas juntas)</span>'
       + '  <input type="file" id="campo-pdf" accept="application/pdf"></label>'
       + '<button class="btn btn-enviar" id="btn-leer">Leer con Gemini</button>';
@@ -233,9 +255,7 @@ function pantallaFormulario(aviso) {
 
     if (estado.origenGrupo === 'NUEVO') {
       html +=
-        '<label class="campo"><span class="etiqueta">Código o nombre del grupo</span>'
-        + '  <input type="text" id="campo-grupo" placeholder="Ej. Grupo A - Manta" value="' + esc(estado.grupo) + '"></label>'
-        + '<span class="etiqueta">Empieza con el módulo</span>'
+        '<span class="etiqueta">Empieza con el módulo</span>'
         + '<div class="grupo-btn">'
         + [1, 2, 3].map(function (n) {
             return '<button type="button" class="tipo-btn' + (estado.numeroModulo === n ? ' activo' : '') + '" data-modulo="' + n + '">Módulo ' + n + '</button>';
@@ -251,6 +271,9 @@ function pantallaFormulario(aviso) {
             : '')
         + '<label class="campo"><span class="etiqueta">Sector</span>'
         + '  <input type="text" id="campo-sector" placeholder="Ej. Los Esteros" value="' + esc(estado.sector) + '"></label>'
+        + '<button type="button" class="btn btn-secundario" id="verificar-sigla">Verificar sigla del sector</button>'
+        + '<div id="resultado-sigla"></div>'
+        + '<div class="aviso neutro" id="preview-codigo" style="display:none"></div>'
         + '<label class="campo"><span class="etiqueta">PDF escaneado</span>'
         + '  <input type="file" id="campo-pdf" accept="application/pdf"></label>'
         + '<button class="btn btn-enviar" id="btn-leer">Leer con Gemini</button>';
@@ -359,6 +382,51 @@ function pantallaFormulario(aviso) {
 
   const btnLeer = document.getElementById('btn-leer');
   if (btnLeer) btnLeer.addEventListener('click', validarYLeerPDF);
+
+  const btnSigla = document.getElementById('verificar-sigla');
+  if (btnSigla) {
+    btnSigla.addEventListener('click', async function () {
+      const sector = document.getElementById('campo-sector').value.trim();
+      const cajaResultado = document.getElementById('resultado-sigla');
+      const cajaPreview = document.getElementById('preview-codigo');
+      if (!sector) { cajaResultado.innerHTML = '<div class="aviso error">Escribe primero el nombre del sector.</div>'; return; }
+      cajaResultado.innerHTML = '<p class="subtitulo">Verificando…</p>';
+      try {
+        const d = await llamarBackend('sugerirSiglaSector', { localidad: estado.pestana, sector: sector });
+        if (d.error) { cajaResultado.innerHTML = '<div class="aviso error">' + esc(d.error) + '</div>'; return; }
+        let sigla;
+        if (d.existe) {
+          sigla = d.sigla;
+          cajaResultado.innerHTML = '<div class="aviso ok"><b>Ya está en el catálogo</b>Sigla: ' + esc(sigla) + '</div>';
+        } else {
+          sigla = d.sugerencia;
+          cajaResultado.innerHTML =
+            '<div class="aviso neutro"><b>Sector nuevo</b>Sigla sugerida: ' + esc(sigla) + '. '
+            + 'Si prefieres otra, escríbela aquí (opcional):</div>'
+            + '<input type="text" id="sigla-propia" maxlength="6" placeholder="Ej: ' + esc(sigla) + '" style="margin-top:6px">';
+          const siglaInput = document.getElementById('sigla-propia');
+          siglaInput.addEventListener('input', function () { actualizarPreviewCodigo(cajaPreview, siglaInput.value.trim() || sigla); });
+        }
+        actualizarPreviewCodigo(cajaPreview, sigla);
+      } catch (err) {
+        cajaResultado.innerHTML = '<div class="aviso error">No se pudo verificar: ' + esc(err.message) + '</div>';
+      }
+    });
+  }
+}
+
+// Muestra, desde antes de guardar, el código que se usará como nombre del
+// grupo (localidad + cantón + sigla del sector) — igual que en Protección,
+// donde la sigla aparece apenas se verifica, no solo al final.
+function actualizarPreviewCodigo(caja, sigla) {
+  if (!caja) return;
+  const campoCanton = document.getElementById('campo-canton');
+  const cantones = CANTONES_POR_LOC[estado.identidad.loc] || [];
+  const canton = campoCanton ? campoCanton.value : (cantones.length === 1 ? cantones[0] : '');
+  const cantonSigla = canton ? (CANTON_A_SIGLA[canton] || limpiarParaCodigo(canton).slice(0, 2)) : '';
+  const codigo = [estado.identidad.loc, cantonSigla, sigla].filter(Boolean).join('-');
+  caja.style.display = 'block';
+  caja.innerHTML = '<b>Nombre del grupo</b>Se usará: <b>' + esc(codigo) + '</b>. El código de registro completo (con número de jornada y fecha) se arma solo al guardar.';
 }
 
 function moduloParaEnviar() {
@@ -371,22 +439,26 @@ function moduloParaEnviar() {
 function validarYLeerPDF() {
   const fecha = document.getElementById('campo-fecha').value;
   const archivo = document.getElementById('campo-pdf').files[0];
-  const campoGrupo = document.getElementById('campo-grupo');
   const campoSector = document.getElementById('campo-sector');
   const campoCanton = document.getElementById('campo-canton');
+  const siglaPropia = document.getElementById('sigla-propia');
 
-  const grupo = campoGrupo ? campoGrupo.value.trim() : (estado.jornadaSeleccionada ? estado.jornadaSeleccionada.grupo : '');
   const sector = campoSector ? campoSector.value.trim() : (estado.jornadaSeleccionada ? estado.jornadaSeleccionada.sector : '');
   const cantones = CANTONES_POR_LOC[estado.identidad.loc] || [];
   const canton = campoCanton ? campoCanton.value : (cantones.length ? cantones[0] : '');
+  estado.siglaSector = siglaPropia ? siglaPropia.value.trim() : '';
 
   if (!fecha) { pantallaFormulario('<div class="aviso error"><b>Falta la fecha</b></div>'); return; }
+  let grupoFinal = '';
   if (estado.modo === 'INTENSIVO' || estado.origenGrupo === 'NUEVO') {
-    if (!grupo) { pantallaFormulario('<div class="aviso error"><b>Falta el grupo</b>Escribe un código o nombre.</div>'); return; }
     if (!sector) { pantallaFormulario('<div class="aviso error"><b>Falta el sector</b></div>'); return; }
+    const siglaParaNombre = estado.siglaSector || sector;
+    grupoFinal = codigoGrupoAutomatico(estado.identidad.loc, canton, siglaParaNombre);
   } else if (!estado.jornadaSeleccionada) {
     pantallaFormulario('<div class="aviso error"><b>Elige un grupo</b>Selecciona de la lista antes de continuar.</div>');
     return;
+  } else {
+    grupoFinal = estado.jornadaSeleccionada.grupo;
   }
   if (!archivo) { pantallaFormulario('<div class="aviso error"><b>Falta el PDF</b>Selecciona el archivo escaneado.</div>'); return; }
   if (archivo.size > 20 * 1024 * 1024) {
@@ -394,7 +466,7 @@ function validarYLeerPDF() {
     return;
   }
 
-  estado.fecha = fecha; estado.grupo = grupo; estado.sector = sector; estado.canton = canton;
+  estado.fecha = fecha; estado.grupo = grupoFinal; estado.sector = sector; estado.canton = canton;
 
   const modulo = moduloParaEnviar();
   if (modulo) { estado.numeroModulo = modulo.numeroModulo; estado.tipo = modulo.tipo; }
@@ -485,7 +557,7 @@ function confirmarGuardado() {
 
   const campos = {
     pestana: estado.pestana, grupo: estado.grupo, modo: estado.modo, fecha: estado.fecha,
-    canton: estado.canton, sector: estado.sector,
+    canton: estado.canton, sector: estado.sector, siglaSector: estado.siglaSector || '',
     rol: estado.identidad.rol, localidad: estado.pestana,
     tipo: estado.tipo, hojas: JSON.stringify(estado.hojas)
   };
@@ -505,10 +577,11 @@ function confirmarGuardado() {
 function pantallaExito(resp) {
   document.getElementById('contenido').innerHTML =
     '<div class="titulo-pantalla">Listo</div>'
-    + '<div class="aviso ok"><b>Guardado</b>' + esc(resp.mensaje || 'Resultados guardados.') + '</div>'
+    + '<div class="aviso ok"><b>Guardado</b>' + esc(resp.mensaje || 'Resultados guardados.')
+    + (resp.codigoRegistro ? '<br>Código de registro: ' + esc(resp.codigoRegistro) : '') + '</div>'
     + '<button class="btn btn-enviar" id="btn-otra">Registrar otra carga</button>';
   document.getElementById('btn-otra').addEventListener('click', function () {
-    estado.grupo = ''; estado.fecha = ''; estado.canton = ''; estado.sector = ''; estado.hojas = [];
+    estado.grupo = ''; estado.fecha = ''; estado.canton = ''; estado.sector = ''; estado.siglaSector = ''; estado.hojas = [];
     estado.origenGrupo = 'NUEVO'; estado.jornadaSeleccionada = null; estado.numeroModulo = 1;
     pantallaFormulario();
   });
