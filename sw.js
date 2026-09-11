@@ -4,14 +4,21 @@
 //  pasan por aquí: esos siempre se piden en vivo.
 // ============================================================================
 
-const CACHE_NOMBRE = 'encuesta-satisfaccion-v2';
-const ARCHIVOS_A_GUARDAR = ['./', './index.html', './encuesta.html', './manifest.json',
+const CACHE_NOMBRE = 'encuesta-satisfaccion-v5';
+const ARCHIVOS_A_GUARDAR = ['./', './index.html', './encuesta.html', './taller.html', './proteccion.html', './manifest.json',
                              './icono-192.png', './icono-512.png'];
 
 self.addEventListener('install', function (e) {
   self.skipWaiting();
   e.waitUntil(
-    caches.open(CACHE_NOMBRE).then(function (cache) { return cache.addAll(ARCHIVOS_A_GUARDAR); })
+    caches.open(CACHE_NOMBRE).then(function (cache) {
+      // {cache:'reload'} obliga a pedirle el archivo a la red de verdad, sin
+      // usar el caché HTTP del navegador — si no, podríamos guardar en el
+      // Service Worker una copia que YA estaba vieja desde antes.
+      return Promise.all(ARCHIVOS_A_GUARDAR.map(function (url) {
+        return fetch(url, { cache: 'reload' }).then(function (resp) { return cache.put(url, resp); });
+      }));
+    })
   );
 });
 
@@ -33,7 +40,7 @@ self.addEventListener('fetch', function (e) {
   if (e.request.method !== 'GET' || url.origin !== self.location.origin) return;
 
   e.respondWith(
-    fetch(e.request).then(function (respuesta) {
+    fetch(e.request, { cache: 'no-store' }).then(function (respuesta) {
       const copia = respuesta.clone();
       caches.open(CACHE_NOMBRE).then(function (cache) { cache.put(e.request, copia); });
       return respuesta;
