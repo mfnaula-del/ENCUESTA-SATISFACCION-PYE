@@ -51,7 +51,7 @@ body{font-family:var(--sans);background:var(--papel);color:var(--tinta);
 </div>
 
 <script>
-const URL_BACKEND = 'https://script.google.com/macros/s/AKfycbwPONOVUJ4TKYJbowP9tlOeYWSyrpHYeFaZNgAd6rLousFVsCZVBXzyi-sMiBPRKyin/exec';
+const URL_BACKEND = 'PEGA_AQUI_LA_URL_/exec';
 
 // Localidades y roles en el orden en que se muestran. Los valores (loc/rol)
 // tienen que coincidir exactamente con los del backend (ENCUESTADORES en
@@ -76,9 +76,8 @@ const ROLES_ANTIGUOS_A_NUEVOS = {
 const HERRAMIENTAS = [
   { id: 'encuesta', nombre: 'Indicador de Protección', archivo: 'encuesta.html', roles: null },
   { id: 'taller', nombre: 'Ex Ante y Ex Post — Trabajo social', archivo: 'taller.html', roles: ['Trabajador social de protección'] },
-  { id: 'proteccion', nombre: 'Sesiones Informativas — Protección', archivo: 'proteccion.html', roles: ['Asistente humanitario de protección'] }
-  // Pendiente: una herramienta para "Asistente humanitario de gestión
-  // comunitaria" — se agrega aquí cuando esté lista, con la misma lógica.
+  { id: 'proteccion', nombre: 'Sesiones Informativas — Protección', archivo: 'proteccion.html', roles: ['Asistente humanitario de protección'] },
+  { id: 'referenciacion', nombre: 'Capacitación en referenciación', archivo: 'referenciacion.html', roles: ['Asistente humanitario de gestión comunitaria'] }
 ];
 function herramientasPara(rol) {
   return HERRAMIENTAS.filter(function (h) { return !h.roles || h.roles.indexOf(rol) !== -1; });
@@ -110,7 +109,7 @@ function borrarIdentidadLocal(storage) { storage.removeItem('identidadLocal'); }
 async function cargar(){
   const cont = document.getElementById('contenido');
   try {
-    const r = await fetch(URL_BACKEND);
+    const r = await fetch(URL_BACKEND + '?t=' + Date.now(), { cache: 'no-store' });
     const d = await r.json();
     if (!d.ok) throw new Error('El backend no respondió correctamente.');
     localStorage.setItem('cache_encuestadores', JSON.stringify(d.encuestadores));
