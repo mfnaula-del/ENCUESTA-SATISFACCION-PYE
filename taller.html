@@ -195,7 +195,52 @@ function iniciar() {
 
 function franjaIdentidad() {
   return '<div class="quien"><span><b>' + esc(estado.identidad.rol) + '</b> · ' + esc(estado.pestana) + '</span>'
-    + '<button id="cambiar-identidad">no soy yo</button></div>';
+    + '<button id="cambiar-identidad">no soy yo</button></div>'
+    + '<button class="enlace-tenue" id="ir-consultar-estado">Consultar estado de un grupo</button>';
+}
+
+function cablearFranjaIdentidad() {
+  document.getElementById('cambiar-identidad').addEventListener('click', function () {
+    borrarIdentidadLocal();
+    location.href = 'index.html';
+  });
+  const btnConsultar = document.getElementById('ir-consultar-estado');
+  if (btnConsultar) btnConsultar.addEventListener('click', pantallaConsultaEstado);
+}
+
+// Para que cualquiera pueda comprobar si un grupo/jornada ya se cargó, sin
+// necesitar entrar al Google Sheets. Reutiliza "listarJornadas", que ya
+// existe en el backend — no hace falta tocarlo para esto.
+function pantallaConsultaEstado() {
+  const cont = document.getElementById('contenido');
+  cont.innerHTML = franjaIdentidad()
+    + '<div class="titulo-pantalla" style="margin-top:14px">Consultar estado de un grupo</div>'
+    + '<p class="subtitulo">' + esc(estado.pestana) + ' — busca por nombre para ver si ya tiene PRE y/o POST cargado.</p>'
+    + '<label class="campo"><span class="etiqueta">Buscar grupo</span><input type="text" id="buscar-grupo" placeholder="Escribe parte del nombre del grupo"></label>'
+    + '<div id="lista-estado"><p class="subtitulo">Cargando…</p></div>'
+    + '<button class="btn btn-secundario" id="btn-volver-consulta">← Volver</button>';
+  cablearFranjaIdentidad();
+  document.getElementById('btn-volver-consulta').addEventListener('click', function () { pantallaFormulario(); });
+
+  llamarBackend('listarJornadas', { pestana: estado.pestana }).then(function (resp) {
+    const jornadas = (resp && resp.jornadas) || [];
+    function dibujar(filtro) {
+      const texto = (filtro || '').trim().toLowerCase();
+      const filtradas = texto ? jornadas.filter(function (j) { return j.grupo.toLowerCase().indexOf(texto) !== -1; }) : jornadas;
+      const lista = document.getElementById('lista-estado');
+      if (!filtradas.length) { lista.innerHTML = '<div class="aviso neutro">No hay grupos que coincidan.</div>'; return; }
+      lista.innerHTML = filtradas.map(function (j) {
+        return '<div class="hoja-card"><div class="hoja-card-cabeza"><b>' + j.numero + ' — ' + esc(j.grupo) + '</b></div>'
+          + '<div class="subtitulo">Modo: ' + esc(j.modo) + ' · Sector: ' + esc(j.sector || '—') + '</div>'
+          + j.modulos.map(function (m) { return '<div class="subtitulo">Módulo ' + m.numero + ': ' + estadoModulo(m) + '</div>'; }).join('')
+          + '</div>';
+      }).join('');
+    }
+    dibujar('');
+    document.getElementById('buscar-grupo').addEventListener('input', function (e) { dibujar(e.target.value); });
+  }).catch(function () {
+    document.getElementById('lista-estado').innerHTML = '<div class="aviso error">No se pudo cargar la lista.</div>';
+  });
 }
 
 function estadoModulo(mod) {
@@ -227,22 +272,46 @@ function pantallaFormulario(aviso) {
       + '<div class="grupo-btn">'
       + '  <button type="button" class="tipo-btn' + (estado.tipo === 'PRE' ? ' activo' : '') + '" data-tipo="PRE">Ex Ante (PRE)</button>'
       + '  <button type="button" class="tipo-btn' + (estado.tipo === 'POST' ? ' activo' : '') + '" data-tipo="POST">Ex Post (POST)</button>'
-      + '</div>'
-      + '<label class="campo"><span class="etiqueta">Fecha del taller</span>'
-      + '  <input type="date" id="campo-fecha" max="' + hoy + '" value="' + esc(estado.fecha || hoy) + '"></label>'
-      + (necesitaCanton
-          ? '<label class="campo"><span class="etiqueta">Cantón</span><select id="campo-canton">'
-            + cantones.map(function (c) { return '<option value="' + esc(c) + '"' + (c === estado.canton ? ' selected' : '') + '>' + esc(c) + '</option>'; }).join('')
-            + '</select></label>'
-          : '')
-      + '<label class="campo"><span class="etiqueta">Sector</span>'
-      + '  <input type="text" id="campo-sector" placeholder="Ej. Los Esteros" value="' + esc(estado.sector) + '"></label>'
-      + '<button type="button" class="btn btn-secundario" id="verificar-sigla">Verificar sigla del sector</button>'
-      + '<div id="resultado-sigla"></div>'
-      + '<div class="aviso neutro" id="preview-codigo" style="display:none"></div>'
-      + '<label class="campo"><span class="etiqueta">PDF escaneado (todas las hojas juntas)</span>'
-      + '  <input type="file" id="campo-pdf" accept="application/pdf"></label>'
-      + '<button class="btn btn-enviar" id="btn-leer">Leer con Gemini</button>';
+      + '</div>';
+
+    if (estado.tipo === 'PRE') {
+      html +=
+        '<label class="campo"><span class="etiqueta">Fecha del taller</span>'
+        + '  <input type="date" id="campo-fecha" max="' + hoy + '" value="' + esc(estado.fecha || hoy) + '"></label>'
+        + (necesitaCanton
+            ? '<label class="campo"><span class="etiqueta">Cantón</span><select id="campo-canton">'
+              + cantones.map(function (c) { return '<option value="' + esc(c) + '"' + (c === estado.canton ? ' selected' : '') + '>' + esc(c) + '</option>'; }).join('')
+              + '</select></label>'
+            : '')
+        + '<label class="campo"><span class="etiqueta">Sector</span>'
+        + '  <input type="text" id="campo-sector" placeholder="Ej. Los Esteros" value="' + esc(estado.sector) + '"></label>'
+        + '<button type="button" class="btn btn-secundario" id="verificar-sigla">Verificar sigla del sector</button>'
+        + '<div id="resultado-sigla"></div>'
+        + '<div class="aviso neutro" id="preview-codigo" style="display:none"></div>'
+        + '<label class="campo"><span class="etiqueta">PDF escaneado (todas las hojas juntas)</span>'
+        + '  <input type="file" id="campo-pdf" accept="application/pdf"></label>'
+        + '<button class="btn btn-enviar" id="btn-leer">Leer con Gemini</button>';
+    } else {
+      // POST: el grupo ya existe (se creó al subir el PRE) — se elige de una
+      // lista, no se vuelve a pedir cantón/sector/sigla.
+      const opciones = estado.jornadasExistentes.map(function (j) {
+        const sel = (estado.jornadaSeleccionada && estado.jornadaSeleccionada.numero === j.numero) ? ' selected' : '';
+        return '<option value="' + j.numero + '"' + sel + '>' + j.numero + ' — ' + esc(j.grupo) + '</option>';
+      }).join('');
+      html +=
+        '<label class="campo jornada-select"><span class="etiqueta">¿Cuál grupo?</span>'
+        + '<select id="campo-jornada-intensivo">'
+        + '<option value="">— elige uno —</option>' + opciones
+        + '</select></label>';
+      if (estado.jornadasExistentes.length === 0) {
+        html += '<div class="aviso neutro"><b>Todavía no hay grupos Intensivo con PRE cargado en ' + esc(estado.pestana) + '</b>Primero sube el PRE de un grupo.</div>';
+      } else {
+        html +=
+          '<label class="campo"><span class="etiqueta">PDF escaneado (todas las hojas juntas)</span>'
+          + '  <input type="file" id="campo-pdf" accept="application/pdf"></label>'
+          + '<button class="btn btn-enviar" id="btn-leer">Leer con Gemini</button>';
+      }
+    }
 
   } else {
     // POR_SESION
@@ -319,10 +388,7 @@ function pantallaFormulario(aviso) {
 
   cont.innerHTML = html;
 
-  document.getElementById('cambiar-identidad').addEventListener('click', function () {
-    borrarIdentidadLocal();
-    location.href = 'index.html';
-  });
+  cablearFranjaIdentidad();
 
   document.querySelectorAll('[data-modo]').forEach(function (b) {
     b.addEventListener('click', function () {
@@ -334,7 +400,19 @@ function pantallaFormulario(aviso) {
   document.querySelectorAll('[data-tipo]').forEach(function (b) {
     b.addEventListener('click', function () {
       estado.tipo = b.getAttribute('data-tipo');
-      pantallaFormulario();
+      estado.jornadaSeleccionada = null;
+      if (estado.modo === 'INTENSIVO' && estado.tipo === 'POST') {
+        pantallaCargando('Buscando los grupos de ' + estado.pestana + '…');
+        llamarBackend('listarJornadas', { pestana: estado.pestana }).then(function (resp) {
+          estado.jornadasExistentes = ((resp && resp.jornadas) || []).filter(function (j) { return j.modo === 'INTENSIVO'; });
+          pantallaFormulario();
+        }).catch(function () {
+          estado.jornadasExistentes = [];
+          pantallaFormulario('<div class="aviso error"><b>No se pudo cargar la lista de grupos</b>Intenta de nuevo.</div>');
+        });
+      } else {
+        pantallaFormulario();
+      }
     });
   });
   document.querySelectorAll('[data-origen]').forEach(function (b) {
@@ -364,6 +442,14 @@ function pantallaFormulario(aviso) {
         const primerPendiente = estado.jornadaSeleccionada.modulos.find(function (m) { return !(m.pre && m.post); });
         estado.numeroModulo = primerPendiente ? primerPendiente.numero : 1;
       }
+      pantallaFormulario();
+    });
+  }
+  const selJornadaIntensivo = document.getElementById('campo-jornada-intensivo');
+  if (selJornadaIntensivo) {
+    selJornadaIntensivo.addEventListener('change', function () {
+      const numero = Number(selJornadaIntensivo.value);
+      estado.jornadaSeleccionada = estado.jornadasExistentes.find(function (j) { return j.numero === numero; }) || null;
       pantallaFormulario();
     });
   }
@@ -437,8 +523,35 @@ function moduloParaEnviar() {
 }
 
 function validarYLeerPDF() {
-  const fecha = document.getElementById('campo-fecha').value;
   const archivo = document.getElementById('campo-pdf').files[0];
+
+  // Caso especial: Intensivo + POST → el grupo ya existe, se eligió de una
+  // lista. No hace falta pedir fecha/cantón/sector otra vez.
+  if (estado.modo === 'INTENSIVO' && estado.tipo === 'POST') {
+    if (!estado.jornadaSeleccionada) { pantallaFormulario('<div class="aviso error"><b>Elige un grupo</b>Selecciona de la lista antes de continuar.</div>'); return; }
+    if (!archivo) { pantallaFormulario('<div class="aviso error"><b>Falta el PDF</b>Selecciona el archivo escaneado.</div>'); return; }
+    if (archivo.size > 20 * 1024 * 1024) { pantallaFormulario('<div class="aviso error"><b>El PDF pesa demasiado</b>Máximo 20 MB.</div>'); return; }
+
+    estado.grupo = estado.jornadaSeleccionada.grupo;
+    estado.canton = estado.jornadaSeleccionada.canton;
+    estado.sector = estado.jornadaSeleccionada.sector;
+    estado.fecha = new Date().toISOString().slice(0, 10);
+    estado.siglaSector = '';
+
+    pantallaCargando('Leyendo el PDF con Gemini — puede tardar unos segundos…');
+    leerArchivoComoBase64(archivo).then(function (pdfBase64) {
+      return llamarBackend('leerPDFTaller', { pdfBase64: pdfBase64 });
+    }).then(function (resp) {
+      if (!resp || !resp.exito) throw new Error((resp && resp.error) || 'Gemini no pudo leer el PDF.');
+      estado.hojas = resp.hojas || [];
+      pantallaRevision();
+    }).catch(function (err) {
+      pantallaFormulario('<div class="aviso error"><b>No se pudo leer el PDF</b>' + esc(err.message) + '</div>');
+    });
+    return;
+  }
+
+  const fecha = document.getElementById('campo-fecha').value;
   const campoSector = document.getElementById('campo-sector');
   const campoCanton = document.getElementById('campo-canton');
   const siglaPropia = document.getElementById('sigla-propia');

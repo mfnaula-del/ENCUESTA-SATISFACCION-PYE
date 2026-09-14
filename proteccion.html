@@ -133,12 +133,60 @@ function dibujarMenu(identidad, pestana) {
     + '<button id="cambiar-identidad">no soy yo</button></div>'
     + '<button class="btn btn-enviar" id="ir-pre">Registrar PRE (sesión nueva)</button>'
     + '<button class="btn btn-secundario" id="ir-post">Registrar POST (sesión ya iniciada)</button>'
+    + '<button class="btn btn-secundario" id="ir-consultar">Consultar estado de una sesión</button>'
     + '</div>';
   document.getElementById('ir-pre').addEventListener('click', function () { dibujarFormularioPRE(identidad, pestana); });
   document.getElementById('ir-post').addEventListener('click', function () { dibujarFormularioPOST(identidad, pestana); });
+  document.getElementById('ir-consultar').addEventListener('click', function () { dibujarConsultaEstado(identidad, pestana); });
   document.getElementById('cambiar-identidad').addEventListener('click', function () {
     borrarIdentidad();
     location.href = 'index.html';
+  });
+}
+
+// Para que cualquiera pueda comprobar si una sesión ya se cargó, sin
+// necesitar entrar al Google Sheets. Usa la misma acción "buscarSesion"
+// que ya existe en el backend — no hace falta tocar el backend para esto.
+function dibujarConsultaEstado(identidad, pestana) {
+  const cont = document.getElementById('contenido');
+  cont.innerHTML =
+    '<div class="carta">'
+    + '<div class="titulo-pantalla">Consultar estado de una sesión</div>'
+    + '<p class="subtitulo">' + esc(pestana) + ' — escribe el número para ver si ya tiene PRE y/o POST cargado.</p>'
+    + '<label class="campo"><span class="etiqueta">N.º de sesión</span><input type="number" min="1" max="200" id="numero-consulta"></label>'
+    + '<button class="btn btn-enviar" id="btn-consultar">Buscar</button>'
+    + '<div id="resultado-consulta"></div>'
+    + '<button class="enlace-tenue" id="volver">← Volver</button>'
+    + '</div>';
+
+  document.getElementById('volver').addEventListener('click', function () { dibujarMenu(identidad, pestana); });
+
+  document.getElementById('btn-consultar').addEventListener('click', async function () {
+    const caja = document.getElementById('resultado-consulta');
+    const numeroSesion = Number(document.getElementById('numero-consulta').value);
+    if (!numeroSesion) { caja.innerHTML = '<div class="aviso error">Escribe un número de sesión.</div>'; return; }
+
+    caja.innerHTML = '<p class="subtitulo">Buscando…</p>';
+    try {
+      const s = await llamarBackend({ accion: 'buscarSesion', pestana: pestana, numeroSesion: numeroSesion });
+      if (s.error) { caja.innerHTML = '<div class="aviso error">' + esc(s.error) + '</div>'; return; }
+
+      const tienePre = s.prePoco !== '' && s.prePoco !== null && s.prePoco !== undefined;
+      const tienePost = s.postPoco !== '' && s.postPoco !== null && s.postPoco !== undefined;
+
+      let html = '<div class="aviso ' + (tienePre ? 'ok' : 'neutro') + '"><b>PRE</b>'
+        + (tienePre
+            ? 'Cargado. Tema: ' + esc(s.tema) + '. Sector: ' + esc(s.sector) + '. Total: ' + esc(s.totalPre) + '/20.'
+            : 'Todavía no se ha cargado.')
+        + '</div>';
+      html += '<div class="aviso ' + (tienePost ? 'ok' : 'neutro') + '"><b>POST</b>'
+        + (tienePost ? 'Cargado. Total: ' + esc(s.totalPost) + '/20.' : 'Todavía no se ha cargado.')
+        + '</div>';
+      if (s.codigoRegistro) html += '<div class="aviso neutro"><b>Código de registro</b>' + esc(s.codigoRegistro) + '</div>';
+      caja.innerHTML = html;
+    } catch (err) {
+      caja.innerHTML = '<div class="aviso error">No se pudo consultar: ' + esc(err.message) + '</div>';
+    }
   });
 }
 
