@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Evaluación de referenciación</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icono-192.png">
+<meta name="theme-color" content="#3F4A3C">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Referenciación PyE">
+<style>
+:root{
+  --papel:#F5F4F0; --carta:#FFFFFF; --tinta:#1A1D1A;
+  --oliva:#3F4A3C; --linea:#E2E0DA; --apagado:#7A7C75;
+  --senal:#9B2C1F; --ambar:#B8860B;
+  --sans:-apple-system,'Segoe UI',system-ui,sans-serif;
+  --mono:'SF Mono',Menlo,monospace;
+}
+body{font-family:var(--sans);background:var(--papel);color:var(--tinta);
+  padding:20px 16px;line-height:1.5}
+.envoltura{max-width:600px;margin:0 auto}
+.carta{background:var(--carta);border:1px solid var(--linea);
+  border-radius:12px;padding:16px}
+.btn{width:100%;padding:14px;border:0;border-radius:10px;font-size:15px;
+  font-weight:600;font-family:inherit;cursor:pointer;margin-top:10px}
+.btn-enviar{background:var(--oliva);color:#fff}
+.btn-secundario{background:#fff;color:var(--oliva);border:1px solid var(--oliva)}
+.btn:disabled{opacity:.5;cursor:default}
+.aviso{border-radius:9px;padding:12px 13px;margin-top:11px;font-size:13px;line-height:1.5}
+.aviso b{display:block;margin-bottom:4px}
+.aviso.ok{background:#E3EFE0;color:#2C351F}
+.aviso.error{background:#FBEBE8;color:#7B241A}
+.aviso.neutro{background:#FDF3E3;color:#5C4210}
+.titulo-pantalla{font-size:19px;font-weight:700;margin-bottom:4px}
+.subtitulo{font-size:13px;color:var(--apagado);margin-bottom:16px}
+.quien{border:1px solid var(--linea);border-radius:8px;padding:10px 12px;font-size:13px;
+  display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+.quien b{font-size:14px}
+.quien button{background:none;border:0;color:var(--apagado);text-decoration:underline;
+  font-size:12px;font-family:inherit;cursor:pointer;padding:0}
+.etiqueta{display:block;font-size:13px;font-weight:600;color:var(--oliva);margin:14px 0 6px}
+.etiqueta:first-child{margin-top:0}
+.campo select,.campo input[type=text],.campo input[type=date]{
+  width:100%;padding:11px 12px;border:1px solid var(--linea);border-radius:8px;
+  font-family:inherit;font-size:15px;color:var(--tinta);background:#fff;box-sizing:border-box}
+.campo input[type=file]{width:100%;font-size:13px;padding:10px;border:1px dashed var(--linea);
+  border-radius:8px;background:#fafaf8;box-sizing:border-box}
+.grupo-btn{display:flex;gap:8px}
+.tipo-btn{flex:1;padding:12px;border:1px solid var(--linea);border-radius:8px;background:#fff;
+  font-family:inherit;font-size:14px;font-weight:600;color:var(--apagado);cursor:pointer}
+.tipo-btn.activo{background:var(--oliva);color:#fff;border-color:var(--oliva)}
+.enlace-tenue{display:block;text-align:center;margin-top:16px;font-size:13px;color:var(--apagado);
+  text-decoration:underline;background:none;border:0;cursor:pointer;width:100%;font-family:inherit}
+.hoja-card{border:1px solid var(--linea);border-radius:10px;padding:12px 13px;margin-top:12px}
+.hoja-card-cabeza{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.hoja-card-cabeza b{font-size:14px}
+.marca-revisar{font-size:11px;font-weight:600;color:var(--ambar);background:#FDF3E3;
+  padding:3px 8px;border-radius:20px}
+.pregunta-fila{margin-top:8px}
+.pregunta-fila span{display:block;font-size:12px;color:var(--apagado);margin-bottom:4px}
+.pregunta-fila select{width:100%;padding:9px 10px;border:1px solid var(--linea);border-radius:7px;
+  font-family:inherit;font-size:14px;background:#fff}
+.girando{display:inline-block;width:16px;height:16px;border:2px solid var(--linea);
+  border-top-color:var(--oliva);border-radius:50%;animation:girar 0.8s linear infinite;
+  vertical-align:middle;margin-right:8px}
+@keyframes girar{to{transform:rotate(360deg)}}
+.modulo-lista{display:flex;flex-direction:column;gap:8px;margin-top:4px}
+.modulo-btn{width:100%;text-align:left;padding:11px 12px;border:1px solid var(--linea);border-radius:8px;
+  background:#fff;font-family:inherit;cursor:pointer}
+.modulo-btn.activo{border-color:var(--oliva);background:#EFF2ED}
+.modulo-btn:disabled{opacity:.45;cursor:default}
+.modulo-btn .nombre{font-size:14px;font-weight:600;display:block}
+.modulo-btn .estado{font-size:12px;color:var(--apagado)}
+.jornada-select{margin-bottom:2px}
+.info-jornada{border:1px solid var(--linea);border-radius:8px;padding:10px 12px;font-size:13px;
+  color:var(--apagado);margin-top:8px;margin-bottom:4px}
+</style>
+</head>
+<body>
+<div class="envoltura">
+  <div class="carta" id="contenido"><p>Cargando…</p></div>
+</div>
+
+<script>
+// TODO: pega aquí la URL /exec de la implementación como app web de talleres.gs
+// (Apps Script del proyecto de talleres > Implementar > Nueva implementación >
+// Aplicación web > Ejecutar como: yo, Quién tiene acceso: cualquiera con el enlace).
+const URL_BACKEND = 'https://script.google.com/macros/s/AKfycby5nOkJFLcsLGSxWQCL6Gt_IZ6njP9pJ_yvlQ_uZP8X6zbcUmumir0uvLaZRG8oK-vIow/exec';
+
+// Mismas 3 preguntas y mismo orden que PREGUNTAS_TALLER en talleres.gs.
+const PREGUNTAS = [
+  '¿Cuánto conoces sobre los derechos humanos?',
+  '¿Cuánto conoces sobre entornos seguros y de riesgo?',
+  '¿Cuánto conoces sobre cómo las personas pueden ayudar y proteger a su comunidad?'
+];
+
+// Solo index.html elige localidad y rol. Aquí solo se lee esa identidad —
+// si falta o no es el rol correcto, se manda de vuelta al inicio, en vez de
+// duplicar el selector (así no hay dos listas de roles que puedan desalinearse).
+const NOMBRE_LOC = { MB: 'Manabí', G: 'Guayaquil', M: 'Milagro' };
+const ROL_ESPERADO = 'Asistente humanitario de gestión comunitaria';
+
+// Cantones por localidad, misma forma en las tres herramientas: un arreglo
+// por código de localidad. Si tiene más de un cantón, se pregunta cuál; si
+// solo tiene uno, la localidad ES el cantón y no se pregunta.
+const CANTONES_POR_LOC = {
+  MB: ['Manta', 'Montecristi', 'Jaramijo', 'Portoviejo'],
+  G: ['Guayaquil'],
+  M: ['Milagro']
+};
+// Mismas siglas de cantón que ya usa el backend (generarCodigoRegistro) —
+// solo para que la vista previa del código coincida con lo que se guardará.
+const CANTON_A_SIGLA = {
+  Manta: 'MT', Montecristi: 'MC', Jaramijo: 'JJ', Portoviejo: 'PT',
+  Guayaquil: 'G', Milagro: 'M'
+};
+
+const esc = s => String(s ?? '').replace(/[&<>"]/g,
+  c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+// Genera un código de grupo legible a partir de localidad+cantón+sector (sin
+// fecha, para que el PRE y el POST del mismo grupo -aunque se hagan en días
+// distintos- siempre produzcan el mismo texto y coincidan en la misma
+// jornada). Solo se usa si el colega deja el campo de nombre vacío.
+function limpiarParaCodigo(s) {
+  return String(s || '').trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^A-Za-z0-9]+/g, '').toUpperCase();
+}
+function codigoGrupoAutomatico(locCodigo, canton, sector) {
+  const partes = [locCodigo];
+  if (canton) partes.push(limpiarParaCodigo(canton));
+  partes.push(limpiarParaCodigo(sector));
+  return partes.filter(Boolean).join('-');
+}
+
+function leerIdentidadLocal() {
+  try { return JSON.parse(localStorage.getItem('identidadLocal') || 'null'); } catch (e) { return null; }
+}
+function borrarIdentidadLocal() { localStorage.removeItem('identidadLocal'); }
+
+// ---- estado de la sesión en esta pantalla ----
+const estado = {
+  identidad: null,
+  pestana: '',            // Manabí / Guayaquil / Milagro — se deriva de la identidad
+  modo: 'INTENSIVO',      // 'INTENSIVO' | 'POR_SESION'
+  origenGrupo: 'NUEVO',   // 'NUEVO' | 'EXISTENTE' (solo aplica en Por sesión)
+  grupo: '', fecha: '', canton: '', sector: '', siglaSector: '',
+  numeroModulo: 1,
+  tipo: 'PRE',
+  ciclosExistentes: [],
+  cicloSeleccionado: null,
+  hojas: []
+};
+
+function llamarBackend(accion, campos) {
+  const cuerpo = new URLSearchParams(Object.assign({ accion: accion }, campos || {}));
+  return fetch(URL_BACKEND, { method: 'POST', body: cuerpo }).then(function (r) { return r.json(); });
+}
+
+function leerArchivoComoBase64(archivo) {
+  return new Promise(function (resolve, reject) {
+    const lector = new FileReader();
+    lector.onload = function () {
+      const resultado = String(lector.result || '');
+      const coma = resultado.indexOf(',');
+      resolve(coma >= 0 ? resultado.slice(coma + 1) : resultado);
+    };
+    lector.onerror = function () { reject(new Error('No se pudo leer el archivo del celular.')); };
+    lector.readAsDataURL(archivo);
+  });
+}
+
+// ==================================================== pantalla 1: identidad
+
+function iniciar() {
+  const cont = document.getElementById('contenido');
+  const identidad = leerIdentidadLocal();
+
+  if (!identidad || identidad.rol !== ROL_ESPERADO) {
+    cont.innerHTML =
+      '<div class="titulo-pantalla">Falta tu identidad</div>'
+      + '<div class="aviso error">Esta página es para el rol "' + esc(ROL_ESPERADO) + '". '
+      + 'Vuelve al inicio y elige tu localidad y área de trabajo.</div>'
+      + '<a class="btn btn-secundario" href="index.html" style="display:block;text-align:center;text-decoration:none;box-sizing:border-box">Volver al inicio</a>';
+    return;
+  }
+
+  estado.identidad = identidad;
+  estado.pestana = NOMBRE_LOC[identidad.loc];
+  pantallaFormulario();
+}
+
+// ==================================================== pantalla 2: formulario
+
+function franjaIdentidad() {
+  return '<div class="quien"><span><b>' + esc(estado.identidad.rol) + '</b> · ' + esc(estado.pestana) + '</span>'
+    + '<button id="cambiar-identidad">no soy yo</button></div>'
+    + '<button class="enlace-tenue" id="ir-consultar-estado">Consultar estado de un grupo</button>';
+}
+
+function cablearFranjaIdentidad() {
+  document.getElementById('cambiar-identidad').addEventListener('click', function () {
+    borrarIdentidadLocal();
+    location.href = 'index.html';
+  });
+  const btnConsultar = document.getElementById('ir-consultar-estado');
+  if (btnConsultar) btnConsultar.addEventListener('click', pantallaConsultaEstado);
+}
+
+// Para que cualquiera pueda comprobar si un grupo/jornada ya se cargó, sin
+// necesitar entrar al Google Sheets. Reutiliza "listarJornadas", que ya
+// existe en el backend — no hace falta tocarlo para esto.
+function pantallaConsultaEstado() {
+  const cont = document.getElementById('contenido');
+  cont.innerHTML = franjaIdentidad()
+    + '<div class="titulo-pantalla" style="margin-top:14px">Consultar estado de un grupo</div>'
+    + '<p class="subtitulo">' + esc(estado.pestana) + ' — busca por nombre para ver si ya tiene PRE y/o POST cargado.</p>'
+    + '<label class="campo"><span class="etiqueta">Buscar grupo</span><input type="text" id="buscar-grupo" placeholder="Escribe parte del nombre del grupo"></label>'
+    + '<div id="lista-estado"><p class="subtitulo">Cargando…</p></div>'
+    + '<button class="btn btn-secundario" id="btn-volver-consulta">← Volver</button>';
+  cablearFranjaIdentidad();
+  document.getElementById('btn-volver-consulta').addEventListener('click', function () { pantallaFormulario(); });
+
+  llamarBackend('listarCiclos', { pestana: estado.pestana }).then(function (resp) {
+    const jornadas = (resp && resp.ciclos) || [];
+    function dibujar(filtro) {
+      const texto = (filtro || '').trim().toLowerCase();
+      const filtradas = texto ? jornadas.filter(function (j) { return j.grupo.toLowerCase().indexOf(texto) !== -1; }) : jornadas;
+      const lista = document.getElementById('lista-estado');
+      if (!filtradas.length) { lista.innerHTML = '<div class="aviso neutro">No hay grupos que coincidan.</div>'; return; }
+      lista.innerHTML = filtradas.map(function (j) {
+        return '<div class="hoja-card"><div class="hoja-card-cabeza"><b>' + j.numero + ' — ' + esc(j.grupo) + '</b></div>'
+          + '<div class="subtitulo">Modo: ' + esc(j.modo) + ' · Sector: ' + esc(j.lugar || '—') + '</div>'
+          + j.preguntas.map(function (m) { return '<div class="subtitulo">Módulo ' + m.numero + ': ' + estadoModulo(m) + '</div>'; }).join('')
+          + '</div>';
+      }).join('');
+    }
+    dibujar('');
+    document.getElementById('buscar-grupo').addEventListener('input', function (e) { dibujar(e.target.value); });
+  }).catch(function () {
+    document.getElementById('lista-estado').innerHTML = '<div class="aviso error">No se pudo cargar la lista.</div>';
+  });
+}
+
+function estadoModulo(mod) {
+  if (mod.pre && mod.post) return 'PRE y POST completos';
+  if (mod.pre) return 'PRE listo — falta POST';
+  return 'sin empezar';
+}
+
+function pantallaFormulario(aviso) {
+  const cont = document.getElementById('contenido');
+  const hoy = new Date().toISOString().slice(0, 10);
+  const cantones = CANTONES_POR_LOC[estado.identidad.loc] || [];
+  const necesitaCanton = cantones.length > 1;
+
+  let html =
+    '<div class="titulo-pantalla">Evaluación de referenciación</div>'
+    + '<p class="subtitulo">Sube el PDF con todas las hojas de una misma carga.</p>'
+    + franjaIdentidad()
+    + (aviso || '')
+    + '<span class="etiqueta">Modalidad de la capacitación</span>'
+    + '<div class="grupo-btn">'
+    + '  <button type="button" class="tipo-btn' + (estado.modo === 'INTENSIVO' ? ' activo' : '') + '" data-modo="INTENSIVO">Intensivo</button>'
+    + '  <button type="button" class="tipo-btn' + (estado.modo === 'POR_SESION' ? ' activo' : '') + '" data-modo="POR_SESION">Por sesión</button>'
+    + '</div>';
+
+  if (estado.modo === 'INTENSIVO') {
+    html +=
+      '<span class="etiqueta">Tipo</span>'
+      + '<div class="grupo-btn">'
+      + '  <button type="button" class="tipo-btn' + (estado.tipo === 'PRE' ? ' activo' : '') + '" data-tipo="PRE">Ex Ante (PRE)</button>'
+      + '  <button type="button" class="tipo-btn' + (estado.tipo === 'POST' ? ' activo' : '') + '" data-tipo="POST">Ex Post (POST)</button>'
+      + '</div>';
+
+    if (estado.tipo === 'PRE') {
+      html +=
+        '<label class="campo"><span class="etiqueta">Fecha de la capacitación</span>'
+        + '  <input type="date" id="campo-fecha" max="' + hoy + '" value="' + esc(estado.fecha || hoy) + '"></label>'
+        + (necesitaCanton
+            ? '<label class="campo"><span class="etiqueta">Ciudad</span><select id="campo-canton">'
+              + cantones.map(function (c) { return '<option value="' + esc(c) + '"' + (c === estado.canton ? ' selected' : '') + '>' + esc(c) + '</option>'; }).join('')
+              + '</select></label>'
+            : '')
+        + '<label class="campo"><span class="etiqueta">Lugar</span>'
+        + '  <input type="text" id="campo-sector" placeholder="Ej. Los Esteros" value="' + esc(estado.sector) + '"></label>'
+        + '<button type="button" class="btn btn-secundario" id="verificar-sigla">Verificar sigla del lugar</button>'
+        + '<div id="resultado-sigla"></div>'
+        + '<div class="aviso neutro" id="preview-codigo" style="display:none"></div>'
+        + '<label class="campo"><span class="etiqueta">PDF escaneado (todas las hojas juntas)</span>'
+        + '  <input type="file" id="campo-pdf" accept="application/pdf"></label>'
+        + '<button class="btn btn-enviar" id="btn-leer">Leer con Gemini</button>';
+    } else {
+      // POST: el grupo ya existe (se creó al subir el PRE) — se elige de una
+      // lista, no se vuelve a pedir cantón/sector/sigla.
+      const opciones = estado.ciclosExistentes.map(function (j) {
+        const sel = (estado.cicloSeleccionado && estado.cicloSeleccionado.numero === j.numero) ? ' selected' : '';
+        return '<option value="' + j.numero + '"' + sel + '>' + j.numero + ' — ' + esc(j.grupo) + '</option>';
+      }).join('');
+      html +=
+        '<label class="campo jornada-select"><span class="etiqueta">¿Cuál grupo?</span>'
+        + '<select id="campo-jornada-intensivo">'
+        + '<option value="">— elige uno —</option>' + opciones
+        + '</select></label>';
+      if (estado.ciclosExistentes.length === 0) {
+        html += '<div class="aviso neutro"><b>Todavía no hay grupos Intensivo con PRE cargado en ' + esc(estado.pestana) + '</b>Primero sube el PRE de un grupo.</div>';
+      } else {
+        html +=
+          '<label class="campo"><span class="etiqueta">PDF escaneado (todas las hojas juntas)</span>'
+          + '  <input type="file" id="campo-pdf" accept="application/pdf"></label>'
+          + '<button class="btn btn-enviar" id="btn-leer">Leer con Gemini</button>';
+      }
+    }
+
+  } else {
+    // POR_SESION
+    html +=
+      '<span class="etiqueta">Grupo</span>'
+      + '<div class="grupo-btn">'
+      + '  <button type="button" class="tipo-btn' + (estado.origenGrupo === 'NUEVO' ? ' activo' : '') + '" data-origen="NUEVO">Grupo nuevo</button>'
+      + '  <button type="button" class="tipo-btn' + (estado.origenGrupo === 'EXISTENTE' ? ' activo' : '') + '" data-origen="EXISTENTE">Grupo ya empezado</button>'
+      + '</div>';
+
+    if (estado.origenGrupo === 'NUEVO') {
+      html +=
+        '<span class="etiqueta">Empieza con el módulo</span>'
+        + '<div class="grupo-btn">'
+        + [1, 2, 3].map(function (n) {
+            return '<button type="button" class="tipo-btn' + (estado.numeroModulo === n ? ' activo' : '') + '" data-modulo="' + n + '">Módulo ' + n + '</button>';
+          }).join('')
+        + '</div>'
+        + '<p class="subtitulo" style="margin-top:6px">Esta primera carga siempre es el PRE de ese módulo.</p>'
+        + '<label class="campo"><span class="etiqueta">Fecha de esta sesión</span>'
+        + '  <input type="date" id="campo-fecha" max="' + hoy + '" value="' + esc(estado.fecha || hoy) + '"></label>'
+        + (necesitaCanton
+            ? '<label class="campo"><span class="etiqueta">Ciudad</span><select id="campo-canton">'
+              + cantones.map(function (c) { return '<option value="' + esc(c) + '"' + (c === estado.canton ? ' selected' : '') + '>' + esc(c) + '</option>'; }).join('')
+              + '</select></label>'
+            : '')
+        + '<label class="campo"><span class="etiqueta">Lugar</span>'
+        + '  <input type="text" id="campo-sector" placeholder="Ej. Los Esteros" value="' + esc(estado.sector) + '"></label>'
+        + '<button type="button" class="btn btn-secundario" id="verificar-sigla">Verificar sigla del lugar</button>'
+        + '<div id="resultado-sigla"></div>'
+        + '<div class="aviso neutro" id="preview-codigo" style="display:none"></div>'
+        + '<label class="campo"><span class="etiqueta">PDF escaneado</span>'
+        + '  <input type="file" id="campo-pdf" accept="application/pdf"></label>'
+        + '<button class="btn btn-enviar" id="btn-leer">Leer con Gemini</button>';
+
+    } else {
+      const opciones = estado.ciclosExistentes.map(function (j) {
+        const sel = (estado.cicloSeleccionado && estado.cicloSeleccionado.numero === j.numero) ? ' selected' : '';
+        return '<option value="' + j.numero + '"' + sel + '>' + j.numero + ' — ' + esc(j.grupo) + '</option>';
+      }).join('');
+      html +=
+        '<label class="campo jornada-select"><span class="etiqueta">¿Cuál grupo?</span>'
+        + '<select id="campo-jornada">'
+        + '<option value="">— elige uno —</option>' + opciones
+        + '</select></label>';
+
+      if (estado.ciclosExistentes.length === 0) {
+        html += '<div class="aviso neutro"><b>Todavía no hay grupos por sesión en ' + esc(estado.pestana) + '</b>Empieza uno con "Grupo nuevo".</div>';
+      }
+
+      if (estado.cicloSeleccionado) {
+        const j = estado.cicloSeleccionado;
+        html +=
+          '<div class="info-jornada">' + esc(j.provincia) + (j.ciudad && j.ciudad !== j.provincia ? ' · ' + esc(j.ciudad) : '') + ' · ' + esc(j.lugar) + '</div>'
+          + '<span class="etiqueta">¿Qué toca subir?</span>'
+          + '<div class="modulo-lista">'
+          + j.preguntas.map(function (m) {
+              const completo = m.pre && m.post;
+              const activo = estado.numeroModulo === m.numero;
+              return '<button type="button" class="modulo-btn' + (activo ? ' activo' : '') + '" data-modulo="' + m.numero + '"' + (completo ? ' disabled' : '') + '>'
+                + '<span class="nombre">Módulo ' + m.numero + '</span>'
+                + '<span class="estado">' + PREGUNTAS[m.numero - 1] + ' — ' + estadoModulo(m) + '</span>'
+                + '</button>';
+            }).join('')
+          + '</div>'
+          + '<label class="campo"><span class="etiqueta">Fecha de esta sesión</span>'
+          + '  <input type="date" id="campo-fecha" max="' + hoy + '" value="' + esc(estado.fecha || hoy) + '"></label>'
+          + '<label class="campo"><span class="etiqueta">PDF escaneado</span>'
+          + '  <input type="file" id="campo-pdf" accept="application/pdf"></label>'
+          + '<button class="btn btn-enviar" id="btn-leer">Leer con Gemini</button>';
+      }
+    }
+  }
+
+  cont.innerHTML = html;
+
+  cablearFranjaIdentidad();
+
+  document.querySelectorAll('[data-modo]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      estado.modo = b.getAttribute('data-modo');
+      estado.origenGrupo = 'NUEVO'; estado.cicloSeleccionado = null; estado.numeroModulo = 1;
+      pantallaFormulario();
+    });
+  });
+  document.querySelectorAll('[data-tipo]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      estado.tipo = b.getAttribute('data-tipo');
+      estado.cicloSeleccionado = null;
+      if (estado.modo === 'INTENSIVO' && estado.tipo === 'POST') {
+        pantallaCargando('Buscando los grupos de ' + estado.pestana + '…');
+        llamarBackend('listarCiclos', { pestana: estado.pestana }).then(function (resp) {
+          estado.ciclosExistentes = ((resp && resp.ciclos) || []).filter(function (j) { return j.modo === 'INTENSIVO'; });
+          pantallaFormulario();
+        }).catch(function () {
+          estado.ciclosExistentes = [];
+          pantallaFormulario('<div class="aviso error"><b>No se pudo cargar la lista de grupos</b>Intenta de nuevo.</div>');
+        });
+      } else {
+        pantallaFormulario();
+      }
+    });
+  });
+  document.querySelectorAll('[data-origen]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      estado.origenGrupo = b.getAttribute('data-origen');
+      estado.cicloSeleccionado = null;
+      if (estado.origenGrupo === 'EXISTENTE') {
+        pantallaCargando('Buscando los grupos de ' + estado.pestana + '…');
+        llamarBackend('listarCiclos', { pestana: estado.pestana }).then(function (resp) {
+          estado.ciclosExistentes = (resp && resp.ciclos) || [];
+          pantallaFormulario();
+        }).catch(function () {
+          estado.ciclosExistentes = [];
+          pantallaFormulario('<div class="aviso error"><b>No se pudo cargar la lista de grupos</b>Intenta de nuevo.</div>');
+        });
+      } else {
+        pantallaFormulario();
+      }
+    });
+  });
+  const selJornada = document.getElementById('campo-jornada');
+  if (selJornada) {
+    selJornada.addEventListener('change', function () {
+      const numero = Number(selJornada.value);
+      estado.cicloSeleccionado = estado.ciclosExistentes.find(function (j) { return j.numero === numero; }) || null;
+      if (estado.cicloSeleccionado) {
+        const primerPendiente = estado.cicloSeleccionado.preguntas.find(function (m) { return !(m.pre && m.post); });
+        estado.numeroModulo = primerPendiente ? primerPendiente.numero : 1;
+      }
+      pantallaFormulario();
+    });
+  }
+  const selJornadaIntensivo = document.getElementById('campo-jornada-intensivo');
+  if (selJornadaIntensivo) {
+    selJornadaIntensivo.addEventListener('change', function () {
+      const numero = Number(selJornadaIntensivo.value);
+      estado.cicloSeleccionado = estado.ciclosExistentes.find(function (j) { return j.numero === numero; }) || null;
+      pantallaFormulario();
+    });
+  }
+  document.querySelectorAll('.modulo-btn').forEach(function (b) {
+    b.addEventListener('click', function () {
+      estado.numeroModulo = Number(b.getAttribute('data-modulo'));
+      pantallaFormulario();
+    });
+  });
+  document.querySelectorAll('[data-modulo]:not(.modulo-btn)').forEach(function (b) {
+    b.addEventListener('click', function () {
+      estado.numeroModulo = Number(b.getAttribute('data-modulo'));
+      pantallaFormulario();
+    });
+  });
+
+  const btnLeer = document.getElementById('btn-leer');
+  if (btnLeer) btnLeer.addEventListener('click', validarYLeerPDF);
+
+  const btnSigla = document.getElementById('verificar-sigla');
+  if (btnSigla) {
+    btnSigla.addEventListener('click', async function () {
+      const sector = document.getElementById('campo-sector').value.trim();
+      const cajaResultado = document.getElementById('resultado-sigla');
+      const cajaPreview = document.getElementById('preview-codigo');
+      if (!sector) { cajaResultado.innerHTML = '<div class="aviso error">Escribe primero el nombre del lugar.</div>'; return; }
+      cajaResultado.innerHTML = '<p class="subtitulo">Verificando…</p>';
+      try {
+        const d = await llamarBackend('sugerirSiglaSector', { localidad: estado.pestana, sector: sector });
+        if (d.error) { cajaResultado.innerHTML = '<div class="aviso error">' + esc(d.error) + '</div>'; return; }
+        let sigla;
+        if (d.existe) {
+          sigla = d.sigla;
+          cajaResultado.innerHTML = '<div class="aviso ok"><b>Ya está en el catálogo</b>Sigla: ' + esc(sigla) + '</div>';
+        } else {
+          sigla = d.sugerencia;
+          cajaResultado.innerHTML =
+            '<div class="aviso neutro"><b>Lugar nuevo</b>Sigla sugerida: ' + esc(sigla) + '. '
+            + 'Si prefieres otra, escríbela aquí (opcional):</div>'
+            + '<input type="text" id="sigla-propia" maxlength="6" placeholder="Ej: ' + esc(sigla) + '" style="margin-top:6px">';
+          const siglaInput = document.getElementById('sigla-propia');
+          siglaInput.addEventListener('input', function () { actualizarPreviewCodigo(cajaPreview, siglaInput.value.trim() || sigla); });
+        }
+        actualizarPreviewCodigo(cajaPreview, sigla);
+      } catch (err) {
+        cajaResultado.innerHTML = '<div class="aviso error">No se pudo verificar: ' + esc(err.message) + '</div>';
+      }
+    });
+  }
+}
+
+// Muestra, desde antes de guardar, el código que se usará como nombre del
+// grupo (localidad + cantón + sigla del sector) — igual que en Protección,
+// donde la sigla aparece apenas se verifica, no solo al final.
+function actualizarPreviewCodigo(caja, sigla) {
+  if (!caja) return;
+  const campoCanton = document.getElementById('campo-canton');
+  const cantones = CANTONES_POR_LOC[estado.identidad.loc] || [];
+  const canton = campoCanton ? campoCanton.value : (cantones.length === 1 ? cantones[0] : '');
+  const cantonSigla = canton ? (CANTON_A_SIGLA[canton] || limpiarParaCodigo(canton).slice(0, 2)) : '';
+  const codigo = [estado.identidad.loc, cantonSigla, sigla].filter(Boolean).join('-');
+  caja.style.display = 'block';
+  caja.innerHTML = '<b>Nombre del grupo</b>Se usará: <b>' + esc(codigo) + '</b>. El código de registro completo (con número de jornada y fecha) se arma solo al guardar.';
+}
+
+function moduloParaEnviar() {
+  if (estado.modo === 'INTENSIVO') return null;
+  if (estado.origenGrupo === 'NUEVO') return { numeroModulo: estado.numeroModulo, tipo: 'PRE' };
+  const m = estado.cicloSeleccionado.preguntas.find(function (x) { return x.numero === estado.numeroModulo; });
+  return { numeroModulo: estado.numeroModulo, tipo: (m && m.pre) ? 'POST' : 'PRE' };
+}
+
+function validarYLeerPDF() {
+  const archivo = document.getElementById('campo-pdf').files[0];
+
+  // Caso especial: Intensivo + POST → el grupo ya existe, se eligió de una
+  // lista. No hace falta pedir fecha/cantón/sector otra vez.
+  if (estado.modo === 'INTENSIVO' && estado.tipo === 'POST') {
+    if (!estado.cicloSeleccionado) { pantallaFormulario('<div class="aviso error"><b>Elige un grupo</b>Selecciona de la lista antes de continuar.</div>'); return; }
+    if (!archivo) { pantallaFormulario('<div class="aviso error"><b>Falta el PDF</b>Selecciona el archivo escaneado.</div>'); return; }
+    if (archivo.size > 20 * 1024 * 1024) { pantallaFormulario('<div class="aviso error"><b>El PDF pesa demasiado</b>Máximo 20 MB.</div>'); return; }
+
+    estado.grupo = estado.cicloSeleccionado.grupo;
+    estado.canton = estado.cicloSeleccionado.ciudad;
+    estado.sector = estado.cicloSeleccionado.lugar;
+    estado.fecha = new Date().toISOString().slice(0, 10);
+    estado.siglaSector = '';
+
+    pantallaCargando('Leyendo el PDF con Gemini — puede tardar unos segundos…');
+    leerArchivoComoBase64(archivo).then(function (pdfBase64) {
+      return llamarBackend('leerPDFTaller', { pdfBase64: pdfBase64 });
+    }).then(function (resp) {
+      if (!resp || !resp.exito) throw new Error((resp && resp.error) || 'Gemini no pudo leer el PDF.');
+      estado.hojas = resp.hojas || [];
+      pantallaRevision();
+    }).catch(function (err) {
+      pantallaFormulario('<div class="aviso error"><b>No se pudo leer el PDF</b>' + esc(err.message) + '</div>');
+    });
+    return;
+  }
+
+  const fecha = document.getElementById('campo-fecha').value;
+  const campoSector = document.getElementById('campo-sector');
+  const campoCanton = document.getElementById('campo-canton');
+  const siglaPropia = document.getElementById('sigla-propia');
+
+  const sector = campoSector ? campoSector.value.trim() : (estado.cicloSeleccionado ? estado.cicloSeleccionado.lugar : '');
+  const cantones = CANTONES_POR_LOC[estado.identidad.loc] || [];
+  const canton = campoCanton ? campoCanton.value : (cantones.length ? cantones[0] : '');
+  estado.siglaSector = siglaPropia ? siglaPropia.value.trim() : '';
+
+  if (!fecha) { pantallaFormulario('<div class="aviso error"><b>Falta la fecha</b></div>'); return; }
+  let grupoFinal = '';
+  if (estado.modo === 'INTENSIVO' || estado.origenGrupo === 'NUEVO') {
+    if (!sector) { pantallaFormulario('<div class="aviso error"><b>Falta el sector</b></div>'); return; }
+    const siglaParaNombre = estado.siglaSector || sector;
+    grupoFinal = codigoGrupoAutomatico(estado.identidad.loc, canton, siglaParaNombre);
+  } else if (!estado.cicloSeleccionado) {
+    pantallaFormulario('<div class="aviso error"><b>Elige un grupo</b>Selecciona de la lista antes de continuar.</div>');
+    return;
+  } else {
+    grupoFinal = estado.cicloSeleccionado.grupo;
+  }
+  if (!archivo) { pantallaFormulario('<div class="aviso error"><b>Falta el PDF</b>Selecciona el archivo escaneado.</div>'); return; }
+  if (archivo.size > 20 * 1024 * 1024) {
+    pantallaFormulario('<div class="aviso error"><b>El PDF pesa demasiado</b>Máximo 20 MB.</div>');
+    return;
+  }
+
+  estado.fecha = fecha; estado.grupo = grupoFinal; estado.sector = sector; estado.canton = canton;
+
+  const modulo = moduloParaEnviar();
+  if (modulo) { estado.numeroModulo = modulo.numeroModulo; estado.tipo = modulo.tipo; }
+
+  pantallaCargando('Leyendo el PDF con Gemini — puede tardar unos segundos…');
+  leerArchivoComoBase64(archivo).then(function (pdfBase64) {
+    if (estado.modo === 'INTENSIVO') {
+      return llamarBackend('leerPDFTaller', { pdfBase64: pdfBase64 });
+    }
+    return llamarBackend('leerPDFTallerModulo', { pdfBase64: pdfBase64, numeroModulo: estado.numeroModulo });
+  }).then(function (resp) {
+    if (!resp || !resp.exito) throw new Error((resp && resp.error) || 'Gemini no pudo leer el PDF.');
+    estado.hojas = resp.hojas || [];
+    pantallaRevision();
+  }).catch(function (err) {
+    pantallaFormulario('<div class="aviso error"><b>No se pudo leer el PDF</b>' + esc(err.message) + '</div>');
+  });
+}
+
+// ==================================================== pantalla 3: cargando
+
+function pantallaCargando(mensaje) {
+  document.getElementById('contenido').innerHTML =
+    '<div class="titulo-pantalla"><span class="girando"></span>Un momento…</div>'
+    + '<p class="subtitulo">' + esc(mensaje) + '</p>';
+}
+
+// ==================================================== pantalla 4: revisión editable
+
+function opcionesRespuesta(valorActual) {
+  const opciones = [['', '— sin marca —'], ['POCO', 'Poco'], ['ALGO', 'Algo'], ['MUCHO', 'Mucho']];
+  return opciones.map(function (o) {
+    const sel = o[0] === (valorActual || '') ? ' selected' : '';
+    return '<option value="' + o[0] + '"' + sel + '>' + o[1] + '</option>';
+  }).join('');
+}
+
+function pantallaRevision(aviso) {
+  const cont = document.getElementById('contenido');
+  const esIntensivo = estado.modo === 'INTENSIVO';
+
+  const tarjetas = estado.hojas.map(function (hoja, i) {
+    const marca = hoja.legible === false ? '<span class="marca-revisar">revisar</span>' : '';
+    let filas;
+    if (esIntensivo) {
+      filas = [1, 2, 3].map(function (n) {
+        const campo = 'modulo' + n;
+        return '<div class="pregunta-fila"><span>' + esc(PREGUNTAS[n - 1]) + '</span>'
+          + '<select data-hoja="' + i + '" data-campo="' + campo + '">' + opcionesRespuesta(hoja[campo]) + '</select></div>';
+      }).join('');
+    } else {
+      filas = '<div class="pregunta-fila"><span>' + esc(PREGUNTAS[estado.numeroModulo - 1]) + '</span>'
+        + '<select data-hoja="' + i + '" data-campo="respuesta">' + opcionesRespuesta(hoja.respuesta) + '</select></div>';
+    }
+    return '<div class="hoja-card"><div class="hoja-card-cabeza"><b>Hoja ' + (hoja.numeroHoja || (i + 1)) + '</b>' + marca + '</div>' + filas + '</div>';
+  }).join('');
+
+  const resumen = estado.modo === 'INTENSIVO'
+    ? (estado.modo + ' · ' + estado.tipo + ' · ' + estado.grupo)
+    : ('Por sesión · Módulo ' + estado.numeroModulo + ' · ' + estado.tipo + ' · ' + estado.grupo);
+
+  cont.innerHTML =
+    '<div class="titulo-pantalla">Revisa lo que leyó Gemini</div>'
+    + '<p class="subtitulo">' + estado.hojas.length + ' hoja(s) · ' + esc(resumen) + '. Corrige lo que haga falta antes de confirmar.</p>'
+    + (aviso || '')
+    + tarjetas
+    + '<button class="btn btn-enviar" id="btn-confirmar">Confirmar y guardar</button>'
+    + '<button class="btn btn-secundario" id="btn-volver">Volver a subir el PDF</button>';
+
+  cont.querySelectorAll('select[data-hoja]').forEach(function (sel) {
+    sel.addEventListener('change', function () {
+      const i = Number(sel.getAttribute('data-hoja'));
+      const campo = sel.getAttribute('data-campo');
+      estado.hojas[i][campo] = sel.value;
+    });
+  });
+  document.getElementById('btn-confirmar').addEventListener('click', confirmarGuardado);
+  document.getElementById('btn-volver').addEventListener('click', function () { pantallaFormulario(); });
+}
+
+// ==================================================== confirmar y guardar
+
+function confirmarGuardado() {
+  const esIntensivo = estado.modo === 'INTENSIVO';
+  estado.hojas.forEach(function (h) {
+    h.legible = esIntensivo ? !!(h.modulo1 && h.modulo2 && h.modulo3) : !!h.respuesta;
+  });
+
+  const campos = {
+    pestana: estado.pestana, grupo: estado.grupo, modo: estado.modo, fecha: estado.fecha,
+    canton: estado.canton, sector: estado.sector, siglaSector: estado.siglaSector || '',
+    rol: estado.identidad.rol, localidad: estado.pestana,
+    tipo: estado.tipo, hojas: JSON.stringify(estado.hojas)
+  };
+  if (!esIntensivo) campos.numeroModulo = estado.numeroModulo;
+
+  pantallaCargando('Guardando en la matriz…');
+  llamarBackend('guardarResultadosCiclo', campos).then(function (resp) {
+    if (!resp || !resp.exito) throw new Error((resp && resp.error) || 'No se pudo guardar.');
+    pantallaExito(resp);
+  }).catch(function (err) {
+    pantallaRevision('<div class="aviso error"><b>No se pudo guardar</b>' + esc(err.message) + '</div>');
+  });
+}
+
+// ==================================================== pantalla final
+
+function pantallaExito(resp) {
+  document.getElementById('contenido').innerHTML =
+    '<div class="titulo-pantalla">Listo</div>'
+    + '<div class="aviso ok"><b>Guardado</b>' + esc(resp.mensaje || 'Resultados guardados.')
+    + (resp.codigoRegistro ? '<br>Código de registro: ' + esc(resp.codigoRegistro) : '') + '</div>'
+    + '<button class="btn btn-enviar" id="btn-otra">Registrar otra carga</button>';
+  document.getElementById('btn-otra').addEventListener('click', function () {
+    estado.grupo = ''; estado.fecha = ''; estado.canton = ''; estado.sector = ''; estado.siglaSector = ''; estado.hojas = [];
+    estado.origenGrupo = 'NUEVO'; estado.cicloSeleccionado = null; estado.numeroModulo = 1;
+    pantallaFormulario();
+  });
+}
+
+iniciar();
+</script>
+</body>
+</html>
