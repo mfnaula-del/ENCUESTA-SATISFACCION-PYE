@@ -305,7 +305,7 @@ const ETIQUETA_TIPO_COINCIDENCIA = { documento: 'el mismo documento', celular: '
 function dibujarAvisoDuplicado(){
   if (!avisoDuplicado) return '';
   const c = avisoDuplicado;
-  if (c.tipo === 'documento') {
+ if (c.tipo === 'documento' || c.tipo === 'nombre_exacto') {
     return '<div class="aviso error"><b>Ya existe una encuesta con este mismo documento</b>'
       + 'La aplicó ' + esc(c.encuestador) + ' el ' + esc(c.fecha) + '. Revisa el número de documento — si es correcto, esta persona ya fue encuestada y no se puede volver a registrar.</div>';
   }
@@ -491,8 +491,7 @@ async function avanzar(){
       if (d.coincidencia) avisoDuplicado = d.coincidencia;
     } catch (err) { /* sin conexión: no se puede verificar ahora mismo, se continúa igual */ }
     if (btnSig) { btnSig.disabled = false; btnSig.textContent = 'Siguiente'; }
-    if (avisoDuplicado && avisoDuplicado.tipo === 'documento') { render(); return; }
-  }
+    if (avisoDuplicado && (avisoDuplicado.tipo === 'documento' || avisoDuplicado.tipo === 'nombre_exacto')) { render(); return; }
 
   pantallaActual++;
   render();
