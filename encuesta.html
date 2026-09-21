@@ -83,10 +83,6 @@ function buscarCodigo(encuestadores, loc, rol) {
   }
   return null;
 }
-// Mismo mapa que index.html: si el dispositivo guardó un rol con el nombre
-// viejo (antes de renombrar los roles), se traduce aquí también — si no,
-// esta pantalla nunca lo reconoce aunque el usuario ya haya elegido su
-// identidad en la página principal.
 const ROLES_ANTIGUOS_A_NUEVOS = {
   'Trabajo social': 'Trabajador social de protección',
   'Protección': 'Asistente humanitario de protección',
@@ -130,9 +126,6 @@ async function pedir(datos){
   return d;
 }
 
-// ---------------------------------------------------------------- lógica
-// (idéntica a la ya probada por separado con Node antes de incrustarla aquí)
-
 function debeAparecer(condicional, respuestas) {
   return (condicional.aplicaSi || []).indexOf(respuestas[condicional.dependeDe]) !== -1;
 }
@@ -160,8 +153,6 @@ function respuestasIniciales(preguntas) {
   return r;
 }
 function validarIdentificacion(id) {
-  // Documento y celular ya no son obligatorios: a veces se aplica a un niño
-  // o niña que no sabe o no tiene su número de cédula.
   if (!String(id.nombres || '').trim()) return 'Falta el nombre del beneficiario.';
   return '';
 }
@@ -173,8 +164,6 @@ function construirPayload(datos) {
   };
   return payload;
 }
-
-// ------------------------------------------------------------ modo sin conexión
 
 function guardarCacheDatos(storage, encuestadores, preguntas) {
   storage.setItem('cache_encuestadores', JSON.stringify(encuestadores));
@@ -222,8 +211,6 @@ function quitarDeCola(storage, id) {
   return cola;
 }
 
-// ---------------------------------------------------------------- estado
-
 const ELEMENTOS_ORDEN = ['SDH', 'MEA', 'ACC', 'PEM'];
 const NOMBRE_ELEMENTO = {
   SDH: 'Seguridad y trato digno', MEA: 'Satisfacción y acceso',
@@ -238,7 +225,7 @@ const NOMBRE_LOC = { MB: 'Manabí', G: 'Guayaquil', M: 'Milagro' };
 
 let PREGUNTAS = [];
 let QUIEN = null;
-let pantallaActual = 0;   // 0 identificación · 1-4 elementos · 5 comentario
+let pantallaActual = 0;
 let estado = {
   fecha: new Date().toISOString().slice(0, 10),
   lugar: '',
@@ -248,16 +235,15 @@ let estado = {
   comentario: ''
 };
 let avisoActual = null;
-let avisoDuplicado = null;   // { tipo, encuestador, fecha } — solo informa, nunca bloquea
-
-// ---------------------------------------------------------------- arranque
+let avisoDuplicado = null;
+let enviandoAhora = false;
 
 async function arrancar(){
   const cont = document.getElementById('contenido');
   const profUrl = parametro('prof');
   try {
     const [datosGet, datosItems] = await Promise.all([
-      fetch(URL_BACKEND).then(function (r) { return r.json(); }),
+      fetch(URL_BACKEND + '?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.json(); }),
       pedir({ accion: 'itemsEncuesta' })
     ]);
     if (!datosGet.ok || !datosItems.exito) throw new Error('El backend no respondió correctamente.');
@@ -270,8 +256,6 @@ async function arrancar(){
     render();
     intentarVaciarCola();
   } catch (err) {
-    // Sin señal (o el backend no respondió): se usa la última copia buena
-    // guardada en este dispositivo, si existe, para poder seguir trabajando.
     const cache = leerCacheDatos(localStorage);
     PROF = cache ? resolverProf(cache.encuestadores, localStorage, profUrl) : null;
     if (cache && PROF) {
@@ -309,8 +293,6 @@ function prepararPantalla(){
   if (catalogo) { estado.identificacion.provincia = catalogo.provincia; estado.identificacion.canton = catalogo.canton; }
 }
 
-// ---------------------------------------------------------------- render
-
 function render(){
   const cont = document.getElementById('contenido');
   cont.innerHTML = dibujarPasos() + dibujarEstadoCola() + dibujarAvisoDuplicado() + dibujarAviso() + dibujarPantalla() + dibujarPie();
@@ -323,7 +305,11 @@ const ETIQUETA_TIPO_COINCIDENCIA = { documento: 'el mismo documento', celular: '
 function dibujarAvisoDuplicado(){
   if (!avisoDuplicado) return '';
   const c = avisoDuplicado;
-  return '<div class="aviso error"><b>Ya existe un registro con ' + esc(ETIQUETA_TIPO_COINCIDENCIA[c.tipo] || 'datos parecidos') + '</b>'
+  if (c.tipo === 'documento') {
+    return '<div class="aviso error"><b>Ya existe una encuesta con este mismo documento</b>'
+      + 'La aplicó ' + esc(c.encuestador) + ' el ' + esc(c.fecha) + '. Revisa el número de documento — si es correcto, esta persona ya fue encuestada y no se puede volver a registrar.</div>';
+  }
+  return '<div class="aviso neutro"><b>Ya existe un registro con ' + esc(ETIQUETA_TIPO_COINCIDENCIA[c.tipo] || 'datos parecidos') + '</b>'
     + 'Lo aplicó ' + esc(c.encuestador) + ' el ' + esc(c.fecha) + '. Si es una persona distinta, puedes continuar sin problema.</div>';
 }
 
@@ -451,8 +437,6 @@ function dibujarComentario(){
   return html;
 }
 
-// ---------------------------------------------------------------- eventos
-
 function actualizarCampo(el, conRender){
   const tipo = el.dataset.tipo;
   if (tipo === 'respuesta') {
@@ -492,10 +476,6 @@ function cablearEventos(){
 }
 
 async function avanzar(){
-  // Las preguntas (1.1 a 4.2 y sus condicionales) ya no son obligatorias:
-  // alguna puede referirse a un servicio que la persona no recibió, y
-  // dejarla vacía es más honesto que forzar una respuesta o un "no
-  // contesta" que no corresponde. Solo identificación sigue validándose.
   if (pantallaActual === 0) {
     const error = validarIdentificacion(estado.identificacion);
     if (error) { avisoActual = { tipo: 'error', titulo: 'Falta información', texto: error }; render(); return; }
@@ -510,6 +490,8 @@ async function avanzar(){
       const d = await pedir({ accion: 'verificarDuplicado', identificacion: JSON.stringify(estado.identificacion) });
       if (d.coincidencia) avisoDuplicado = d.coincidencia;
     } catch (err) { /* sin conexión: no se puede verificar ahora mismo, se continúa igual */ }
+    if (btnSig) { btnSig.disabled = false; btnSig.textContent = 'Siguiente'; }
+    if (avisoDuplicado && avisoDuplicado.tipo === 'documento') { render(); return; }
   }
 
   pantallaActual++;
@@ -518,6 +500,8 @@ async function avanzar(){
 function retroceder(){ avisoActual = null; pantallaActual--; render(); }
 
 async function enviar(){
+  if (enviandoAhora) return;
+  enviandoAhora = true;
   const btnEnv = document.getElementById('btn-enviar');
   if (btnEnv) { btnEnv.disabled = true; btnEnv.textContent = 'Enviando…'; }
   const payload = construirPayload({
@@ -526,10 +510,14 @@ async function enviar(){
   });
   try {
     const d = await pedir(payload);
-    const nota = d.coincidencia
-      ? ' (nota: ya existía un registro con ' + (ETIQUETA_TIPO_COINCIDENCIA[d.coincidencia.tipo] || 'datos parecidos') + ', aplicado por ' + d.coincidencia.encuestador + ')'
-      : '';
-    avisoActual = { tipo: 'ok', titulo: 'Encuesta guardada', texto: (d.mensaje || 'Se registró correctamente.') + nota };
+    if (d.yaExistia) {
+      avisoActual = { tipo: 'ok', titulo: 'Ya estaba registrada', texto: d.mensaje || 'Esta persona ya había sido encuestada — no se guardó de nuevo.' };
+    } else {
+      const nota = d.coincidencia
+        ? ' (nota: ya existía un registro con ' + (ETIQUETA_TIPO_COINCIDENCIA[d.coincidencia.tipo] || 'datos parecidos') + ', aplicado por ' + d.coincidencia.encuestador + ')'
+        : '';
+      avisoActual = { tipo: 'ok', titulo: 'Encuesta guardada', texto: (d.mensaje || 'Se registró correctamente.') + nota };
+    }
     reiniciarFormularioParaSiguiente();
   } catch (err) {
     if (err.esFalloDeRed) {
@@ -540,6 +528,8 @@ async function enviar(){
       avisoActual = { tipo: 'error', titulo: 'No se pudo guardar', texto: err.message };
       render();
     }
+  } finally {
+    enviandoAhora = false;
   }
 }
 
@@ -553,8 +543,6 @@ function reiniciarFormularioParaSiguiente(){
   render();
 }
 
-/** Reintenta enviar lo que quedó pendiente. Se llama sola: al cargar, al
- *  recuperar señal, y cada 20 segundos mientras la página esté abierta. */
 async function intentarVaciarCola(){
   if (!leerCola(localStorage).length) return;
   await vaciarCola(localStorage, function (payloadGuardado) { return pedir(payloadGuardado); });
