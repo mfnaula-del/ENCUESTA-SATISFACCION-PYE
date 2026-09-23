@@ -1,0 +1,1125 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1B2027">
+<title>Agenda · Paz y Esperanza</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#3F4A3C">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Atención PyE">
+<link rel="apple-touch-icon" href="icono-192.png">
+<link rel="icon" type="image/png" href="icono-192.png">
+<style>
+:root{
+  --tinta:#1B2027; --papel:#E9EBE6; --carta:#FFFFFF; --oliva:#3F4A3C;
+  --senal:#C4442E; --ambar:#7A5410; --apagado:#7A8579; --linea:#CFD4CB;
+  --mono:ui-monospace,"SF Mono","Roboto Mono","DejaVu Sans Mono",monospace;
+  --sans:ui-sans-serif,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{font-family:var(--sans);background:var(--papel);color:var(--tinta);min-height:100dvh;
+     padding:20px 16px calc(28px + env(safe-area-inset-bottom))}
+.envoltura{max-width:540px;margin:0 auto}
+
+.eyebrow{font-size:11px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--oliva)}
+h1{font-size:22px;font-weight:600;letter-spacing:-.02em;margin-top:4px}
+.sub{font-size:13px;color:var(--apagado);margin-top:4px}
+
+.modo{display:flex;gap:2px;background:var(--linea);padding:2px;border-radius:10px;margin:20px 0}
+.modo button{flex:1;padding:10px;border:0;background:transparent;border-radius:8px;
+             font-family:inherit;font-size:14px;font-weight:600;color:var(--oliva);cursor:pointer}
+.modo button[aria-selected="true"]{background:var(--carta);color:var(--tinta);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.vista{display:none} .vista.on{display:block}
+
+.loc{margin:16px 0 0;background:var(--carta);border:1px solid var(--linea);
+  border-radius:10px;padding:11px 13px;display:flex;align-items:center;gap:11px}
+.loc label{margin:0;white-space:nowrap;font-size:10px}
+.loc.fijo{display:block;background:var(--oliva);border-color:var(--oliva);padding:13px 15px}
+.loc.fijo label{color:#9FB09C;display:block;margin-bottom:3px}
+.fijo-nombre{display:block;color:#fff;font-size:17px;font-weight:600;letter-spacing:-.01em}
+.fijo-loc{display:block;color:#C7D3C4;font-size:12.5px;margin-top:2px}
+.loc select{font-size:14px;padding:7px 8px;border:0;background:transparent;font-weight:600;
+  color:var(--oliva);width:auto;flex:1}
+.paso{margin-top:22px}
+.paso-cabeza{display:flex;align-items:baseline;gap:9px;margin-bottom:11px}
+.paso-num{font-family:var(--mono);font-size:12px;font-weight:700;color:var(--oliva)}
+.paso-titulo{font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase}
+.carta{background:var(--carta);border:1px solid var(--linea);border-radius:12px;padding:16px}
+
+.rejilla{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.campo{display:flex;flex-direction:column;gap:5px}
+.campo.ancho{grid-column:1/-1}
+label{font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--oliva)}
+input,select,textarea{font-family:inherit;font-size:16px;padding:11px 10px;border:1px solid var(--linea);
+  border-radius:8px;background:#FBFBFA;color:inherit;width:100%}
+textarea{font-size:14px;min-height:60px;resize:vertical}
+input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-visible{
+  outline:2px solid var(--oliva);outline-offset:2px}
+.ayuda{font-size:11.5px;color:var(--apagado);line-height:1.45}
+
+.btn{width:100%;padding:15px;border:0;border-radius:10px;font-family:inherit;font-size:15px;
+     font-weight:600;cursor:pointer;margin-top:12px}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn-enviar{background:var(--oliva);color:#fff}
+.btn-tinta{background:var(--tinta);color:var(--papel)}
+.btn-suave{background:transparent;color:var(--apagado);border:1px solid var(--linea);font-size:13px;padding:11px}
+
+.aviso{padding:13px;border-radius:9px;font-size:13.5px;line-height:1.5;margin-top:12px;border-left:3px solid}
+.aviso.error{background:#FBEBE8;border-color:var(--senal);color:#7B241A}
+.aviso.ok{background:#EDF1EC;border-color:var(--oliva);color:#2C351F}
+.aviso.neutro{background:#EEF0F3;border-color:var(--apagado);color:#3A424C}
+.aviso b{display:block;margin-bottom:3px}
+
+.resumen{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:14px}
+.tarjeta{background:var(--carta);border:1px solid var(--linea);border-radius:10px;padding:12px;text-align:center}
+.tarjeta b{display:block;font-family:var(--mono);font-size:24px;font-weight:400;color:var(--oliva)}
+.tarjeta span{font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--apagado)}
+
+.citas{display:flex;flex-direction:column;gap:10px}
+.cita{background:var(--carta);border:1px solid var(--linea);border-radius:11px;padding:14px}
+.cita.vencida{border-color:var(--ambar);border-left-width:3px}
+.cita.cerrada{opacity:.55}
+.cita-cab{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.cita .nom{font-size:15.5px;font-weight:600;letter-spacing:-.01em}
+.cita .cuando{font-family:var(--mono);font-size:12px;color:var(--oliva);white-space:nowrap}
+.cita .meta{font-size:12px;color:var(--apagado);margin-top:4px;line-height:1.45}
+.cita .cod{font-family:var(--mono);font-size:10px;color:var(--apagado);margin-top:5px;word-break:break-all}
+.etq{display:inline-block;padding:2px 9px;border-radius:20px;font-size:10px;font-weight:700;margin-top:8px}
+.e-nueva{background:#EEF0F3;color:#3A424C}
+.e-vencida{background:#FDF3E3;color:var(--ambar)}
+.e-atendida{background:#E3EFE0;color:#2C351F}
+.e-no{background:#FBEBE8;color:#7B241A}
+.acciones{display:flex;gap:6px;margin-top:11px;flex-wrap:wrap}
+.acciones button{flex:1;min-width:96px;padding:9px 6px;border:1px solid var(--linea);background:#FBFBFA;
+  border-radius:8px;font-family:inherit;font-size:12px;font-weight:600;color:var(--oliva);cursor:pointer}
+.acciones button.si{border-color:var(--oliva);background:var(--oliva);color:#fff}
+.acciones button.no{border-color:#E7C9C3;color:#7B241A}
+
+.donde-sera{background:var(--oliva);color:#fff;border-radius:10px;padding:13px 14px;
+  margin-top:9px;font-size:13.5px;line-height:1.5}
+.donde-sera b{display:block;font-size:15px;margin-bottom:4px}
+.donde-sera span{display:block;color:#C7D3C4;font-size:12.5px;margin-top:3px}
+.dispo{margin-top:11px;padding:12px 13px;border-radius:9px;font-size:13px;line-height:1.5;
+  background:#EDF1EC;border-left:3px solid var(--oliva);color:#2C351F}
+.dispo.especial{background:#FDF3E3;border-left-color:var(--ambar);color:#5C4210}
+.dispo b{display:block;margin-bottom:3px}
+.dispo.vacio{background:#EEF0F3;border-left-color:var(--apagado);color:#3A424C}
+.resumen-dispo{font-size:12px;line-height:1.5;color:var(--apagado);margin-top:9px;
+  padding-left:11px;border-left:2px solid var(--linea)}
+.dictar{background:var(--carta);border:1px solid var(--linea);border-radius:12px;padding:16px;
+  margin-top:16px}
+.dictar.grabando{background:var(--tinta);border-color:#39414B}
+.dictar.grabando .dic-tit,.dictar.grabando .dic-ej{color:var(--papel)}
+.dic-tit{font-size:13px;font-weight:600;margin-bottom:4px}
+.dic-ej{font-size:12px;color:var(--apagado);line-height:1.5;font-style:italic}
+.dic-reloj{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:34px;
+  font-weight:300;text-align:center;margin:12px 0 4px;letter-spacing:-.02em}
+.dic-reloj.on{color:var(--senal)}
+.btn-dictar{background:var(--tinta);color:var(--papel)}
+.btn-dictar.parar{background:var(--senal);color:#fff}
+.propuesta{background:var(--carta);border:1px solid var(--linea);border-left:3px solid var(--oliva);
+  border-radius:10px;padding:14px;margin-top:10px}
+.propuesta .nom{font-size:15.5px;font-weight:600}
+.propuesta .cuando{font-family:var(--mono);font-size:12.5px;color:var(--oliva);margin-top:4px}
+.propuesta .det{font-size:12px;color:var(--apagado);margin-top:5px;line-height:1.45}
+.propuesta.mala{border-left-color:var(--ambar)}
+.propuesta .alerta{font-size:12px;color:var(--ambar);margin-top:7px;line-height:1.45}
+.choque{background:#FDF3E3;border-left:3px solid var(--ambar);border-radius:9px;padding:14px;margin-top:12px}
+.choque b{display:block;color:var(--ambar);margin-bottom:6px;font-size:13.5px}
+.ocupado{font-size:12.5px;color:#5C4210;line-height:1.5;padding:7px 10px;background:#fff;
+  border-radius:6px;margin-bottom:6px}
+.ocupado i{font-style:normal;font-weight:600}
+.huecos{display:flex;flex-direction:column;gap:6px;margin-top:10px}
+.huecos>p{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--ambar);margin-bottom:2px}
+.hueco{text-align:left;background:#fff;border:1px solid #E8D5AE;border-radius:8px;padding:11px 12px;
+  font-family:inherit;font-size:13.5px;color:var(--tinta);cursor:pointer;width:100%}
+.hueco:hover{border-color:var(--oliva)}
+.forzar{background:none;border:0;color:var(--ambar);font-family:inherit;font-size:12px;
+  text-decoration:underline;cursor:pointer;margin-top:10px;padding:0}
+.reag-tit{font-size:15px;font-weight:600}
+.reag-sub{font-size:12.5px;color:var(--apagado);margin-top:3px}
+#reagSeccion .chip{margin:4px 4px 0 0}
+.nav-semana{display:flex;align-items:center;gap:10px;justify-content:space-between}
+.nav-semana button{width:38px;height:38px;border:1px solid var(--linea);background:#FBFBFA;
+  border-radius:9px;font-size:19px;color:var(--oliva);cursor:pointer;line-height:1}
+.nav-semana button:hover{border-color:var(--oliva)}
+.nav-semana span{flex:1;text-align:center;font-size:14px;font-weight:600}
+
+.dia{margin-top:14px}
+.dia-cab{display:flex;align-items:baseline;gap:9px;padding:0 2px 7px}
+.dia-nom{font-size:13px;font-weight:700;letter-spacing:.02em;text-transform:capitalize}
+.dia-fecha{font-family:var(--mono);font-size:11.5px;color:var(--apagado)}
+.dia.hoy .dia-nom{color:var(--senal)}
+.dia-lugar{margin-left:auto;font-size:11px;padding:2px 9px;border-radius:20px;
+  background:#EDF1EC;color:#2C351F;font-weight:600}
+.dia-lugar.especial{background:#FDF3E3;color:#5C4210}
+
+.franjas{background:var(--carta);border:1px solid var(--linea);border-radius:11px;overflow:hidden}
+.dia.hoy .franjas{border-color:var(--senal)}
+.franja{display:flex;gap:11px;padding:9px 12px;border-bottom:1px solid var(--linea);
+  align-items:flex-start}
+.franja:last-child{border-bottom:0}
+.franja.libre{opacity:.42}
+.franja .hora{font-family:var(--mono);font-size:12px;color:var(--oliva);
+  min-width:44px;padding-top:1px;font-weight:600}
+.franja.libre .hora{color:var(--apagado);font-weight:400}
+.franja .cont{flex:1;min-width:0}
+.franja .nom{font-size:14px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.franja .det{font-size:11.5px;color:var(--apagado);margin-top:2px;line-height:1.4}
+.franja .vacio{font-size:12.5px;color:var(--apagado)}
+.franja .etq{display:inline-block;padding:1px 7px;border-radius:20px;font-size:9.5px;
+  font-weight:700;margin-left:5px;vertical-align:1px}
+.e-virtual{background:#EEF0F3;color:#3A424C}
+.e-pend{background:#FDF3E3;color:#7A5410}
+.e-hecha{background:#E3EFE0;color:#2C351F}
+.e-falta{background:#FBEBE8;color:#7B241A}
+
+.dia-vacio{background:var(--carta);border:1px dashed var(--linea);border-radius:11px;
+  padding:15px;text-align:center;font-size:12.5px;color:var(--apagado)}
+.resumen-sem{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:6px}
+.resumen-sem div{background:var(--carta);border:1px solid var(--linea);border-radius:9px;
+  padding:10px;text-align:center}
+.resumen-sem b{display:block;font-family:var(--mono);font-size:20px;font-weight:400;color:var(--oliva)}
+.resumen-sem span{font-size:9.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--apagado)}
+
+.cargando{display:none;text-align:center;padding:20px;font-size:13px;color:var(--apagado)}
+.cargando.on{display:block}
+.pie{margin-top:28px;font-size:11.5px;color:var(--apagado);line-height:1.6;text-align:center}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="envoltura">
+
+  <p style="margin-bottom:14px"><a href="index.html" style="color:#7A8579;text-decoration:none;font-size:12.5px">&larr; Inicio</a></p>
+  <p class="eyebrow">Paz y Esperanza · Ecuador</p>
+  <h1 id="titulo">Agenda</h1>
+  <p class="sub">Agenda con solo el nombre. El código nace en la primera sesión.</p>
+  <p class="ayuda" style="margin-top:8px">Dicta la cita o llénala a mano. Si el horario
+    ya está tomado, el sistema te avisa y te propone los huecos libres más cercanos.</p>
+
+<div class="loc" id="cajaLoc">
+    <label for="profesional">Profesional</label>
+    <select id="profesional" onchange="cambiarProfesional()">
+      <option value="MN">Milton Naula — Manabí</option>
+      <option value="FC">Fernando Cedeño — Manabí</option>
+      <option value="PV">Paola Vallejo — Guayaquil</option>
+      <option value="PO">Paulina Ortega — Guayaquil</option>
+      <option value="MS">Mariana Solís — Milagro</option>
+      <option value="NR">Narcisa Rubio — Milagro</option>
+    </select>
+  </div>
+
+  <div class="modo" role="tablist">
+    <button role="tab" aria-selected="true"  onclick="verVista('nueva',this)">Agendar</button>
+    <button role="tab" aria-selected="false" onclick="verVista('lista',this)">Próximas</button>
+    <button role="tab" aria-selected="false" onclick="verVista('horario',this)">Horario</button>
+  </div>
+
+  <!-- ================= AGENDAR ================= -->
+  <div class="vista on" id="v-nueva">
+
+    <section class="paso">
+      <div class="paso-cabeza"><span class="paso-num">00</span><span class="paso-titulo">Dictar</span></div>
+      <div class="dictar" id="cajaDictar">
+        <p class="dic-tit">Dilo en voz alta y lo lleno por ti</p>
+        <p class="dic-ej">"Agéndame a Grace Lucas el martes a las tres de la tarde en
+          Manta, primera valoración."</p>
+        <div class="dic-reloj" id="dicReloj" hidden>00:00</div>
+        <button class="btn btn-dictar" id="btnDictar" onclick="alternarDictado()">
+          Dictar la cita
+        </button>
+        <div class="cargando" id="dicCargando">Escuchando lo que dijiste…</div>
+        <div id="dicSalida"></div>
+      </div>
+    </section>
+
+    <section class="paso">
+      <div class="paso-cabeza"><span class="paso-num">01</span><span class="paso-titulo">Persona</span></div>
+      <div class="carta">
+        <div class="rejilla">
+          <div class="campo ancho">
+            <label for="nombre">Nombre y apellidos</label>
+            <input id="nombre" placeholder="Juan Pérez Loor" autocomplete="off" oninput="revisar()">
+          </div>
+          <div class="campo ancho">
+            <label for="contacto" id="lblContacto">Teléfono o contacto (opcional)</label>
+            <input id="contacto" inputmode="tel" placeholder="09…" oninput="revisar()">
+            <p class="ayuda" id="ayudaContacto" hidden>Obligatorio para atención virtual:
+              sin número no hay cómo comunicarse con la persona.</p>
+          </div>
+          <div class="campo ancho">
+            <label for="codigo">Código, solo si ya es paciente</label>
+            <input id="codigo" placeholder="Déjalo vacío si es persona nueva"
+                   style="font-family:var(--mono);font-size:12px">
+            <p class="ayuda">Para alguien nuevo, déjalo vacío. No se le reserva ningún
+              número hasta que asista y dictes su primera sesión.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="paso">
+      <div class="paso-cabeza"><span class="paso-num">02</span><span class="paso-titulo">Cita</span></div>
+      <div class="carta">
+        <div class="rejilla">
+          <div class="campo">
+            <label for="fecha">Día</label>
+            <input id="fecha" type="date" onchange="cambiarFecha()">
+          </div>
+          <div class="campo">
+            <label for="hora">Hora</label>
+            <input id="hora" type="time" value="09:00" onchange="revisar()">
+          </div>
+          <div class="campo">
+            <label for="duracion">Duración</label>
+            <select id="duracion">
+              <option value="45">45 min</option>
+              <option value="60" selected>1 hora</option>
+              <option value="90">1 h 30</option>
+              <option value="120">2 horas</option>
+            </select>
+          </div>
+          <div class="campo">
+            <label for="modalidad">Modalidad</label>
+            <select id="modalidad">
+              <option>Individual</option>
+              <option>Grupal</option>
+            </select>
+          </div>
+          <div class="campo">
+            <label for="atencion">Atención</label>
+            <select id="atencion" onchange="cambiarAtencion()">
+              <option>Presencial</option>
+              <option>Virtual</option>
+            </select>
+          </div>
+          <div class="campo ancho">
+            <label for="lugar">Lugar</label>
+            <input id="lugar" list="lugares" placeholder="Manta">
+            <datalist id="lugares">
+              <option>Manta</option><option>Portoviejo</option><option>Jaramijó</option>
+              <option>Montecristi</option><option>Guayaquil</option><option>Milagro</option>
+            </datalist>
+          </div>
+          <div class="campo ancho">
+            <label for="motivo">Motivo (opcional)</label>
+            <textarea id="motivo" placeholder="Derivación, primera valoración, seguimiento…"></textarea>
+          </div>
+        </div>
+        <div id="avisoDispo"></div>
+        <p class="resumen-dispo" id="resumenDispo" hidden></p>
+      </div>
+    </section>
+
+    <section class="paso">
+      <div class="paso-cabeza"><span class="paso-num">03</span><span class="paso-titulo">Guardar</span></div>
+      <div class="carta">
+        <button class="btn btn-enviar" id="btnGuardar" onclick="guardar(false)" disabled>Agendar cita</button>
+        <div class="cargando" id="cargando">Guardando…</div>
+        <div id="salida"></div>
+      </div>
+    </section>
+  </div>
+
+  <!-- ================= PRÓXIMAS ================= -->
+  <div class="vista" id="v-lista">
+    <section class="paso">
+      <div class="paso-cabeza"><span class="paso-num">01</span><span class="paso-titulo">Citas</span></div>
+      <div class="carta">
+        <input id="filtro" placeholder="Filtrar por nombre o código…" oninput="listarDebounce()">
+        <button class="btn btn-suave" onclick="listar()">Actualizar</button>
+      </div>
+    </section>
+    <div id="listaSalida" style="margin-top:16px"></div>
+  </div>
+
+  <section class="paso" id="reagSeccion" hidden>
+    <div class="paso-cabeza"><span class="paso-num">↻</span><span class="paso-titulo">Reagendar</span></div>
+    <div id="reagCaja"></div>
+  </section>
+
+  <!-- ================= HORARIO ================= -->
+  <div class="vista" id="v-horario">
+    <section class="paso">
+      <div class="paso-cabeza"><span class="paso-num">01</span><span class="paso-titulo">Semana</span></div>
+      <div class="carta">
+        <div class="nav-semana">
+          <button onclick="hSemana(-1)" aria-label="Semana anterior">‹</button>
+          <span id="hRotulo">—</span>
+          <button onclick="hSemana(1)" aria-label="Semana siguiente">›</button>
+        </div>
+        <button class="btn btn-suave" onclick="hHoy()">Volver a esta semana</button>
+      </div>
+    </section>
+    <div class="cargando" id="hCargando">Cargando…</div>
+    <div id="hSalida"></div>
+  </div>
+
+  <p class="pie">Documento confidencial · Fundación Paz y Esperanza<br>
+    Milton Fernando Naula Chimbo</p>
+</div>
+
+<script>
+// ===========================================================================
+//  Pega aquí la MISMA URL /exec del Apps Script
+// ===========================================================================
+const URL_BACKEND = 'https://script.google.com/macros/s/AKfycbznImdt0wZkkJHl_xu5bWxjdhZAOS3Gyqbw1L086yO4MkGIDizfUBq4SfhdeJm0X1Lh/exec';
+
+let temporizador=null;
+// ---------------------------------------------------------- profesional
+// Quién está usando el sistema. Viaja en el enlace (?prof=PV) para que cada
+// una guarde su acceso ya fijado. De aquí sale su localidad, su agenda y la
+// firma de sus documentos.
+const PROFESIONALES = {
+  MN:{nombre:'Milton Naula',   loc:'MB', localidad:'Manabí'},
+  FC:{nombre:'Fernando Cedeño',loc:'MB', localidad:'Manabí'},
+  PV:{nombre:'Paola Vallejo',  loc:'G',  localidad:'Guayaquil'},
+  PO:{nombre:'Paulina Ortega', loc:'G',  localidad:'Guayaquil'},
+  MS:{nombre:'Mariana Solís',  loc:'M',  localidad:'Milagro'},
+  NR:{nombre:'Narcisa Rubio',  loc:'M',  localidad:'Milagro'}
+};
+function profesionalActual(){
+  const q=new URLSearchParams(location.search);
+  const u=q.get('prof');
+  if(PROFESIONALES[u]){ recordarProfesional(u); return u; }
+  const guardado = leerProfesionalGuardado();
+  if(guardado) return guardado;
+  // en modo solo-agenda hace falta indicar de quién es la agenda
+  if(q.get('solo')==='1') return null;
+  // compatibilidad con los enlaces viejos que llevaban ?loc=
+  const l=new URLSearchParams(location.search).get('loc');
+  const porLoc={MB:'MN',G:'PV',M:'MS'};
+  return porLoc[l] || 'MN';
+}
+
+/** Guarda quién es, para que el icono de la app abra con su nombre. */
+function recordarProfesional(p){
+  try{ localStorage.setItem('pye_prof', p); }catch(e){}
+}
+function leerProfesionalGuardado(){
+  try{
+    const v = localStorage.getItem('pye_prof');
+    return (v && PROFESIONALES[v]) ? v : null;
+  }catch(e){ return null; }
+}
+function cambiarProfesional(){
+  if(typeof SOLO_AGENDA!=='undefined' && SOLO_AGENDA) return;
+  if(typeof ADMIN!=='undefined' && !ADMIN) return;
+  const v=document.getElementById('profesional').value;
+  const u=new URL(location.href);
+  u.searchParams.set('prof',v);
+  u.searchParams.delete('loc');
+  if(ADMIN) u.searchParams.set('admin','1');
+  location.replace(u.toString());
+}
+const PROF = profesionalActual();
+const LOC  = PROF ? PROFESIONALES[PROF].loc : '';
+
+// El selector solo aparece con ?admin=1, que es el enlace del responsable del
+// sistema. Cada profesional entra con su enlace fijo y no puede cambiarse a
+// otra persona ni por descuido ni a propósito.
+const ADMIN = new URLSearchParams(location.search).get('admin')==='1';
+
+function fijarProfesional(){
+  const caja=document.getElementById('cajaLoc');
+  if(!caja || !PROF) return;
+  const q=PROFESIONALES[PROF];
+  if(ADMIN){
+    const sel=document.getElementById('profesional');
+    if(sel) sel.value=PROF;
+    return;
+  }
+  caja.classList.add('fijo');
+  caja.innerHTML='<label>Profesional</label>'
+    +'<span class="fijo-nombre">'+q.nombre+'</span>'
+    +'<span class="fijo-loc">'+q.localidad+'</span>';
+}
+
+// ?solo=1 → enlace para quien agenda desde territorio.
+// Queda fijo en un solo profesional: no se puede cambiar ni ver el de nadie más,
+// para que no haya equivocaciones en campo.
+const SOLO_AGENDA = new URLSearchParams(location.search).get('solo')==='1';
+// Quién agenda desde territorio. Solo ve y mueve lo que él mismo creó.
+const PUNTO = (new URLSearchParams(location.search).get('punto')||'').toUpperCase();
+const PUNTOS = {EAI:'EAI', JAR:'Jaramijó', PTV:'Portoviejo'};
+if(SOLO_AGENDA){
+  document.querySelectorAll('a[href^="index.html"]').forEach(a=>a.remove());
+  // el punto focal sí necesita ver y mover lo que agendó
+  if(!PUNTOS[PUNTO]){
+    document.querySelectorAll('[role=tab]').forEach(b=>{
+      if(!/Nueva|Agendar/i.test(b.textContent)) b.remove();
+    });
+  }
+  document.title='Agendar cita · '+PROFESIONALES[PROF].nombre;
+  const caja=document.getElementById('cajaLoc');
+  caja.classList.add('fijo');
+  caja.innerHTML='<label>Agenda de</label>'
+    +'<span class="fijo-nombre">'+PROFESIONALES[PROF].nombre+'</span>'
+    +'<span class="fijo-loc">'+PROFESIONALES[PROF].localidad
+    +  (PUNTOS[PUNTO] ? ' · agenda '+PUNTOS[PUNTO] : '')+'</span>';
+}else{
+  fijarProfesional();
+}
+
+const val=id=>document.getElementById(id).value.trim();
+const esc=t=>String(t==null?'':t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+function verVista(v,btn){
+  document.querySelectorAll('.vista').forEach(e=>e.classList.remove('on'));
+  document.getElementById('v-'+v).classList.add('on');
+  document.querySelectorAll('.modo button').forEach(b=>b.setAttribute('aria-selected','false'));
+  btn.setAttribute('aria-selected','true');
+  if(v==='lista') listar();
+  if(v==='horario') hDibujar();
+}
+
+// Acciones que solo leen datos. Se reintentan solas si Google tropieza,
+// porque repetirlas no cambia nada. Las que guardan NO se reintentan: si la
+// primera sí llegó, repetirla podría duplicar la información.
+const SOLO_LECTURA = ['buscar','ficha','grilla','grupos','reporte','items','escala',
+  'margen','hojasBlanco','sinDueno','casosAbiertos','estadoCaso','fechasCaso',
+  'verParticipante','lugarListar','lugarSiguienteNumero','agendaListar',
+  'agendaDia','agendaHuecos','firma'];
+
+const dormirMs = ms => new Promise(r => setTimeout(r, ms));
+
+/**
+ * Habla con el servidor.
+ *
+ * Apps Script a veces devuelve una página de error en vez de datos: un
+ * tropiezo pasajero de Google, más frecuente tras un rato sin uso. Antes eso
+ * llegaba a la pantalla como "Unexpected token '<'". Ahora se detecta, y si la
+ * acción solo lee, se reintenta sola con una pequeña espera.
+ */
+async function pedir(datos){
+  if(URL_BACKEND.indexOf('PEGA_AQUI')===0)
+    throw new Error('Falta la dirección del servidor en este archivo.');
+  const lectura = SOLO_LECTURA.indexOf(datos.accion) !== -1;
+  const intentos = lectura ? 3 : 1;
+  let ultimo = null;
+
+  for(let i=0; i<intentos; i++){
+    if(i > 0) await dormirMs(1200 * i);     // 1.2 s, luego 2.4 s
+    try{
+      const r = await fetch(URL_BACKEND,{method:'POST',body:new URLSearchParams(datos)});
+      const txt = await r.text();
+
+      // ¿vino una página de error en vez de datos?
+      if(txt.trim().charAt(0) === '<'){
+        ultimo = new Error('TROPIEZO');
+        continue;
+      }
+      const d = JSON.parse(txt);
+      if(!d.exito) throw new Error(d.error||'error sin detalle');
+      return d;
+    }catch(e){
+      // un error de la aplicación (datos inválidos, etc.) no se reintenta
+      if(e.message !== 'TROPIEZO' && !/Failed to fetch|NetworkError/i.test(e.message))
+        throw e;
+      ultimo = e;
+    }
+  }
+
+  // se agotaron los intentos
+  if(lectura)
+    throw new Error('El servidor de Google no respondió bien, ni reintentando. '
+      + 'Espera unos segundos y vuelve a intentarlo.');
+  throw new Error('El servidor de Google tuvo un tropiezo y no se sabe si guardó. '
+    + 'Antes de volver a enviar, revisa si la información ya aparece: '
+    + 'así evitas duplicarla.');
+}
+
+function revisar(){
+  const virtual = val('atencion')==='Virtual';
+  const listo = val('nombre') && val('fecha') && val('hora') && (!virtual || val('contacto'));
+  const btn=document.getElementById('btnGuardar');
+  btn.disabled = !listo;
+  btn.textContent = (virtual && !val('contacto') && val('nombre'))
+    ? 'Falta el número de contacto' : 'Agendar cita';
+}
+
+function cambiarAtencion(){
+  const virtual = val('atencion')==='Virtual';
+  document.getElementById('lblContacto').textContent =
+    virtual ? 'Teléfono o contacto (obligatorio)' : 'Teléfono o contacto (opcional)';
+  document.getElementById('ayudaContacto').hidden = !virtual;
+  revisar();
+}
+
+// ---------------------------------------------------------- disponibilidad
+async function cambiarFecha(){
+  revisar();
+  const caja=document.getElementById('avisoDispo');
+  const res=document.getElementById('resumenDispo');
+  if(!val('fecha')){ caja.innerHTML=''; return; }
+  try{
+    const d=await pedir({accion:'agendaDia',profesional:PROF,fecha:val('fecha')});
+    if(d.resumen){ res.textContent=d.resumen; res.hidden=false; }
+    if(!d.disponibilidad){
+      caja.innerHTML='<div class="dispo vacio">Ese día no tiene un lugar fijo asignado. '
+        +'Confirma con el profesional antes de citar.</div>';
+      return;
+    }
+    const x=d.disponibilidad;
+    caja.innerHTML='<div class="dispo'+(x.especial?' especial':'')+'">'
+      +'<b>'+esc(x.dia)+' '+esc(x.fecha)+' · '+esc(x.lugar)+'</b>'
+      +esc(x.nota)+'</div>';
+  }catch(e){ caja.innerHTML=''; }
+}
+
+// ---------------------------------------------------------- dictado
+const DIC_MAX=90, DIC_HZ=16000;
+let dicCtx,dicFuente,dicProc,dicPista,dicTrozos=[],dicHz=48000,dicGrabando=false,dicT0,dicCron;
+
+async function alternarDictado(){ dicGrabando ? pararDictado() : await empezarDictado(); }
+
+async function empezarDictado(){
+  try{
+    dicPista=await navigator.mediaDevices.getUserMedia({
+      audio:{channelCount:1,echoCancellation:true,noiseSuppression:true,autoGainControl:true}});
+  }catch(e){
+    document.getElementById('dicSalida').innerHTML=
+      '<div class="aviso error"><b>Sin micrófono</b>Dale permiso al navegador: candado '
+      +'junto a la dirección → Permisos → Micrófono.</div>';
+    return;
+  }
+  dicCtx=new (window.AudioContext||window.webkitAudioContext)();
+  if(dicCtx.state==='suspended') await dicCtx.resume();
+  dicHz=dicCtx.sampleRate;
+  dicFuente=dicCtx.createMediaStreamSource(dicPista);
+  dicProc=dicCtx.createScriptProcessor(4096,1,1);
+  const mudo=dicCtx.createGain(); mudo.gain.value=0;
+  dicTrozos=[];
+  dicProc.onaudioprocess=e=>{ if(dicGrabando) dicTrozos.push(new Float32Array(e.inputBuffer.getChannelData(0))); };
+  dicFuente.connect(dicProc); dicProc.connect(mudo); mudo.connect(dicCtx.destination);
+
+  dicGrabando=true; dicT0=Date.now();
+  document.getElementById('cajaDictar').classList.add('grabando');
+  document.getElementById('btnDictar').classList.add('parar');
+  document.getElementById('btnDictar').textContent='Listo';
+  const rel=document.getElementById('dicReloj');
+  rel.hidden=false; rel.classList.add('on');
+  document.getElementById('dicSalida').innerHTML='';
+  dicCron=setInterval(()=>{
+    const s=Math.floor((Date.now()-dicT0)/1000);
+    rel.textContent=String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0');
+    if(s>=DIC_MAX) pararDictado();
+  },250);
+}
+
+async function pararDictado(){
+  if(!dicGrabando) return;
+  dicGrabando=false; clearInterval(dicCron);
+  try{ dicProc.disconnect(); dicFuente.disconnect(); }catch(e){}
+  dicPista.getTracks().forEach(t=>t.stop());
+  dicCtx.close();
+  document.getElementById('cajaDictar').classList.remove('grabando');
+  document.getElementById('btnDictar').classList.remove('parar');
+  document.getElementById('btnDictar').textContent='Dictar la cita';
+  document.getElementById('dicReloj').classList.remove('on');
+  document.getElementById('dicReloj').hidden=true;
+
+  let total=0; dicTrozos.forEach(t=>total+=t.length);
+  if(total<DIC_HZ*0.5){
+    document.getElementById('dicSalida').innerHTML=
+      '<div class="aviso neutro"><b>Muy corto</b>No alcancé a escuchar nada.</div>';
+    return;
+  }
+  const crudo=new Float32Array(total); let o=0;
+  dicTrozos.forEach(t=>{crudo.set(t,o); o+=t.length;});
+  const wav=dicWav(dicRemuestrear(crudo,dicHz,DIC_HZ),DIC_HZ);
+
+  document.getElementById('dicCargando').classList.add('on');
+  try{
+    const audio=await dicBase64(wav);
+    const d=await pedir({accion:'agendaDictar',audio:audio,audioMime:'audio/wav',profesional:PROF});
+    document.getElementById('dicCargando').classList.remove('on');
+    mostrarPropuestas(d);
+  }catch(e){
+    document.getElementById('dicCargando').classList.remove('on');
+    document.getElementById('dicSalida').innerHTML=
+      '<div class="aviso error"><b>No se pudo procesar</b>'+esc(e.message)+'</div>';
+  }
+}
+
+function mostrarPropuestas(d){
+  if(!d.citas.length){
+    document.getElementById('dicSalida').innerHTML=
+      '<div class="aviso neutro"><b>No entendí ninguna cita</b>'
+      +'Intenta así: "agéndame a Juan Pérez el jueves a las diez de la mañana en Manta".</div>';
+    return;
+  }
+  window.PROPUESTAS=d.citas;
+  let html='<p class="ayuda" style="margin-top:14px">Revisa que esté bien y toca '
+    +'<b>Usar</b>. Puedes corregir cualquier campo después.</p>';
+
+  html+=d.citas.map((c,i)=>{
+    const mala=!c.iso||c.choques.length;
+    let alerta='';
+    if(!c.iso) alerta='<p class="alerta">No entendí la fecha u hora. Ponla a mano abajo.</p>';
+    else if(c.choques.length) alerta='<p class="alerta">Ese horario ya lo tiene '
+      +esc(c.choques[0].nombre)+' ('+esc(c.choques[0].desde)+'). Al confirmar te propongo huecos.</p>';
+    return '<div class="propuesta'+(mala?' mala':'')+'">'
+      +'<div class="nom">'+esc(c.nombre)+'</div>'
+      +'<div class="cuando">'+esc(c.texto)+'</div>'
+      +'<div class="det">'+esc(c.lugar||'sin lugar')+' · '+c.duracion+' min'
+      +(c.motivo?'<br>'+esc(c.motivo):'')+(c.codigo?'<br>'+esc(c.codigo):'')+'</div>'
+      +alerta
+      +'<button class="btn btn-suave" onclick="usarPropuesta('+i+')">Usar</button>'
+      +'</div>';
+  }).join('');
+
+  if(d.dudas&&d.dudas.length)
+    html+='<div class="aviso neutro" style="margin-top:10px"><b>Revisa la ortografía</b>'
+      +esc(d.dudas.join(' · '))+'</div>';
+
+  document.getElementById('dicSalida').innerHTML=html;
+}
+
+function usarPropuesta(i){
+  const c=window.PROPUESTAS[i];
+  document.getElementById('nombre').value=c.nombre||'';
+  document.getElementById('contacto').value=c.contacto||'';
+  document.getElementById('codigo').value=c.codigo||'';
+  document.getElementById('lugar').value=c.lugar||'';
+  document.getElementById('motivo').value=c.motivo||'';
+  if(c.iso){
+    document.getElementById('fecha').value=c.iso.slice(0,10);
+    document.getElementById('hora').value=c.iso.slice(11,16);
+  }
+  const sel=document.getElementById('duracion');
+  if([...sel.options].some(o=>o.value==String(c.duracion))) sel.value=String(c.duracion);
+  revisar();
+  document.getElementById('nombre').scrollIntoView({behavior:'smooth',block:'center'});
+}
+
+function dicRemuestrear(entrada,de,a){
+  if(de===a) return entrada;
+  const razon=de/a,largo=Math.round(entrada.length/razon),salida=new Float32Array(largo);
+  for(let i=0;i<largo;i++){
+    const x=i*razon,i0=Math.floor(x),i1=Math.min(i0+1,entrada.length-1),f=x-i0;
+    salida[i]=entrada[i0]*(1-f)+entrada[i1]*f;
+  }
+  return salida;
+}
+
+function dicWav(m,hz){
+  const buf=new ArrayBuffer(44+m.length*2),v=new DataView(buf);
+  const txt=(p,s)=>{for(let i=0;i<s.length;i++)v.setUint8(p+i,s.charCodeAt(i));};
+  txt(0,'RIFF');v.setUint32(4,36+m.length*2,true);txt(8,'WAVE');
+  txt(12,'fmt ');v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,1,true);
+  v.setUint32(24,hz,true);v.setUint32(28,hz*2,true);v.setUint16(32,2,true);v.setUint16(34,16,true);
+  txt(36,'data');v.setUint32(40,m.length*2,true);
+  let p=44;
+  for(let i=0;i<m.length;i++,p+=2){
+    const s=Math.max(-1,Math.min(1,m[i]));
+    v.setInt16(p,s<0?s*0x8000:s*0x7FFF,true);
+  }
+  return new Blob([v],{type:'audio/wav'});
+}
+
+function dicBase64(blob){
+  return new Promise((ok,mal)=>{
+    const fr=new FileReader();
+    fr.onloadend=()=>ok(fr.result.split(',')[1]);
+    fr.onerror=mal; fr.readAsDataURL(blob);
+  });
+}
+
+// ---------------------------------------------------------- agendar
+async function guardar(forzar){
+  document.getElementById('cargando').classList.add('on');
+  document.getElementById('salida').innerHTML='';
+  document.getElementById('btnGuardar').disabled=true;
+  try{
+    const d=await pedir({
+      accion:'agendaCrear',
+      nombre:val('nombre'), contacto:val('contacto'), codigo:val('codigo'),
+      cuando:val('fecha')+'T'+val('hora'),
+      duracion:val('duracion'), modalidad:val('modalidad'),
+      lugar:val('lugar'), motivo:val('motivo'),
+      atencion:val('atencion'), profesional:PROF, punto:PUNTO,
+      forzar: forzar ? 'si' : ''
+    });
+    document.getElementById('cargando').classList.remove('on');
+
+    // --- el horario ya estaba ocupado ---
+    if(d.creada===false){
+      document.getElementById('salida').innerHTML=
+        '<div class="choque"><b>'+esc(d.mensaje)+'</b>'
+        + d.conflicto.map(c=>'<div class="ocupado">'
+            +'<i>'+esc(c.nombre)+'</i> · '+esc(c.desde)+' a '+esc(c.hasta)
+            +(c.lugar?' · '+esc(c.lugar):'')+'</div>').join('')
+        + (d.sugerencias.length
+            ? '<div class="huecos"><p>Horarios libres más cercanos</p>'
+              + d.sugerencias.map(s=>'<button class="hueco" onclick="usarHueco(\''+s.iso+'\')">'
+                  +esc(s.texto)+'</button>').join('')+'</div>'
+            : '<p style="font-size:12.5px;margin-top:8px">No encontré huecos libres en los '
+              +'próximos días dentro del horario de trabajo.</p>')
+        + '<button class="forzar" onclick="guardar(true)">Agendar de todas formas, sobre la otra cita</button>'
+        + '</div>';
+      document.getElementById('btnGuardar').disabled=false;
+      return;
+    }
+
+    // --- creada ---
+    document.getElementById('salida').innerHTML=
+      '<div class="aviso ok"><b>Cita agendada</b>'+esc(d.nombre)+' · '+esc(d.cuando)
+      +(d.forzada?'<br>Quedó encima de otra cita, como pediste.':'')
+      +' · '+esc(d.atencion||'Presencial')
+      +(d.calendario?'<br>También está en tu Google Calendar.':'')
+      +'</div>'
+      // dónde recibirá la atención: lo primero que necesita saber la persona
+      +(d.donde
+        ?'<div class="donde-sera"><b>La atención será en '+esc(d.donde)+'</b>'
+          +'<span>Dile a la persona que se acerque ahí ese día.</span>'
+          +(d.disponibilidad&&d.disponibilidad.especial
+            ?'<span>'+esc(d.disponibilidad.nota)+'</span>':'')
+          +'</div>':'')
+      +'<div class="aviso neutro" style="margin-top:8px">'+esc(d.nota)+'</div>'
+      +'<button class="btn btn-suave" onclick="limpiar()">Agendar a otra persona</button>';
+  }catch(e){
+    document.getElementById('cargando').classList.remove('on');
+    document.getElementById('salida').innerHTML=
+      '<div class="aviso error"><b>No se pudo agendar</b>'+esc(e.message)+'</div>';
+    document.getElementById('btnGuardar').disabled=false;
+  }
+}
+
+/** Toma uno de los huecos propuestos y lo pone en el formulario. */
+function usarHueco(iso){
+  document.getElementById('fecha').value=iso.slice(0,10);
+  document.getElementById('hora').value=iso.slice(11,16);
+  document.getElementById('salida').innerHTML=
+    '<div class="aviso neutro"><b>Horario cambiado</b>'
+    +'Quedó en '+esc(iso.slice(8,10)+'/'+iso.slice(5,7))+' a las '+esc(iso.slice(11,16))
+    +'. Toca <b style="display:inline">Agendar cita</b> para confirmar.</div>';
+  revisar();
+  document.getElementById('btnGuardar').scrollIntoView({behavior:'smooth',block:'center'});
+}
+
+function limpiar(){
+  ['nombre','contacto','codigo','motivo'].forEach(i=>document.getElementById(i).value='');
+  document.getElementById('salida').innerHTML='';
+  revisar();
+  document.getElementById('nombre').focus();
+}
+
+
+// ============================================================================
+//  HORARIO
+//  La misma agenda, pero vista como semana: de un vistazo se ve dónde hay que
+//  estar cada día, quién está citado y qué franjas quedan libres.
+// ============================================================================
+const H_INICIO = 8, H_FIN = 17;   // horario de trabajo
+let H_LUNES = null;               // lunes de la semana que se está mirando
+
+function lunesDe(f){
+  const d = new Date(f);
+  d.setHours(0,0,0,0);
+  const n = d.getDay();                       // 0 domingo
+  d.setDate(d.getDate() - (n===0 ? 6 : n-1)); // retrocede al lunes
+  return d;
+}
+
+function hHoy(){ H_LUNES = lunesDe(new Date()); hDibujar(); }
+function hSemana(n){
+  if(!H_LUNES) H_LUNES = lunesDe(new Date());
+  H_LUNES = new Date(H_LUNES.getTime() + n*7*86400000);
+  hDibujar();
+}
+
+const DIAS_ES=['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
+const MESES_ES=['enero','febrero','marzo','abril','mayo','junio','julio','agosto',
+                'septiembre','octubre','noviembre','diciembre'];
+const iso = d => d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')
+                 +'-'+String(d.getDate()).padStart(2,'0');
+
+async function hDibujar(){
+  if(!H_LUNES) H_LUNES = lunesDe(new Date());
+  const cg=document.getElementById('hCargando');
+  const caja=document.getElementById('hSalida');
+  const viernes=new Date(H_LUNES.getTime()+4*86400000);
+
+  document.getElementById('hRotulo').textContent =
+    H_LUNES.getDate()+' – '+viernes.getDate()+' de '+MESES_ES[viernes.getMonth()]
+    +(H_LUNES.getMonth()!==viernes.getMonth()
+      ? ' ('+MESES_ES[H_LUNES.getMonth()]+'–'+MESES_ES[viernes.getMonth()]+')':'')
+    +' '+viernes.getFullYear();
+
+  cg.classList.add('on');
+  try{
+    const d=await pedir({accion:'agendaListar',filtro:'',dias:'90',profesional:PROF});
+    cg.classList.remove('on');
+
+    window.CITAS = d.citas;
+    // repartir las citas por día
+    const porDia={};
+    d.citas.forEach(c=>{
+      const k=c.iso.slice(0,10);
+      (porDia[k]=porDia[k]||[]).push(c);
+    });
+
+    const hoyISO=iso(new Date());
+    let html='', totalSem=0, pendSem=0;
+    const dias=[];
+
+    for(let i=0;i<5;i++){                       // lunes a viernes
+      const f=new Date(H_LUNES.getTime()+i*86400000);
+      const k=iso(f);
+      const citas=(porDia[k]||[]).sort((a,b)=>a.iso.localeCompare(b.iso));
+      totalSem+=citas.length;
+      pendSem+=citas.filter(c=>c.estado==='Agendada').length;
+      dias.push({f,k,citas});
+    }
+
+    html+='<div class="resumen-sem">'
+      +'<div><b>'+totalSem+'</b><span>Citas</span></div>'
+      +'<div><b>'+pendSem+'</b><span>Por atender</span></div>'
+      +'<div><b>'+dias.filter(x=>x.citas.length).length+'</b><span>Días con agenda</span></div>'
+      +'</div>';
+
+    for(const {f,k,citas} of dias){
+      const esHoy = k===hoyISO;
+      let dispo=null;
+      try{ const r=await pedir({accion:'agendaDia',profesional:PROF,fecha:k});
+           dispo=r.disponibilidad; }catch(e){}
+
+      html+='<div class="dia'+(esHoy?' hoy':'')+'">'
+        +'<div class="dia-cab"><span class="dia-nom">'+DIAS_ES[f.getDay()]+'</span>'
+        +'<span class="dia-fecha">'+String(f.getDate()).padStart(2,'0')+'/'
+        +String(f.getMonth()+1).padStart(2,'0')+'</span>'
+        +(dispo?'<span class="dia-lugar'+(dispo.especial?' especial':'')+'">'
+                +esc(dispo.lugar)+'</span>':'')
+        +'</div>';
+
+      if(!citas.length){
+        html+='<div class="dia-vacio">Sin citas</div></div>';
+        continue;
+      }
+
+      html+='<div class="franjas">';
+      // franjas ocupadas, y las libres entre medio
+      let cursor=H_INICIO*60;
+      citas.forEach(c=>{
+        const [hh,mm]=c.cuando.slice(11,16).split(':').map(Number);
+        const ini=hh*60+mm, fin=ini+(c.duracion||60);
+        if(ini-cursor>=30) html+=franjaLibre(cursor,ini);
+        html+=franjaCita(c);
+        cursor=Math.max(cursor,fin);
+      });
+      if(H_FIN*60-cursor>=30) html+=franjaLibre(cursor,H_FIN*60);
+      html+='</div></div>';
+    }
+
+    caja.innerHTML=html;
+  }catch(e){
+    cg.classList.remove('on');
+    caja.innerHTML='<div class="aviso error"><b>No se pudo cargar</b>'+esc(e.message)+'</div>';
+  }
+}
+
+function hhmm(min){
+  return String(Math.floor(min/60)).padStart(2,'0')+':'+String(min%60).padStart(2,'0');
+}
+
+function franjaLibre(desde,hasta){
+  const h=Math.round((hasta-desde)/60*10)/10;
+  return '<div class="franja libre"><span class="hora">'+hhmm(desde)+'</span>'
+    +'<span class="cont"><span class="vacio">libre · '
+    +(h>=1?h+' h':(hasta-desde)+' min')+'</span></span></div>';
+}
+
+function franjaCita(c){
+  const etq = c.estado==='Atendida'   ? '<span class="etq e-hecha">atendida</span>'
+            : c.estado==='No asistió' ? '<span class="etq e-falta">no asistió</span>'
+            : c.vencida               ? '<span class="etq e-pend">sin marcar</span>' : '';
+  const virtual = c.atencion==='Virtual' ? '<span class="etq e-virtual">virtual</span>' : '';
+  return '<div class="franja"><span class="hora">'+esc(c.cuando.slice(11,16))+'</span>'
+    +'<span class="cont"><span class="nom">'+esc(c.nombre)+virtual+etq+'</span>'
+    +'<span class="det">hasta '+esc(c.hasta)
+    +(c.lugar?' · '+esc(c.lugar):'')
+    +(c.nueva?' · persona nueva':'')
+    +(c.motivo?'<br>'+esc(c.motivo):'')
+    +(c.atencion==='Virtual'&&c.contacto?'<br>'+esc(c.contacto):'')
+    +'</span></span></div>';
+}
+
+// ---------------------------------------------------------- listar
+function listarDebounce(){ clearTimeout(temporizador); temporizador=setTimeout(listar,320); }
+
+async function listar(){
+  const caja=document.getElementById('listaSalida');
+  caja.innerHTML='<div class="cargando on">Cargando…</div>';
+  try{
+    const d=await pedir({accion:'agendaListar',filtro:val('filtro'),dias:'60',
+                         profesional:PROF, punto:PUNTO});
+    if(!d.citas.length){
+      caja.innerHTML='<div class="aviso neutro"><b>Sin citas</b>'
+        +'No hay citas en los próximos 60 días con ese filtro.</div>';
+      return;
+    }
+    // Guardar la lista: sin esto, reagendar no encontraba la cita y no cargaba.
+    window.CITAS = d.citas;
+    caja.innerHTML=
+      '<div class="resumen">'
+      + '<div class="tarjeta"><b>'+d.pendientes+'</b><span>Por atender</span></div>'
+      + '<div class="tarjeta"><b>'+d.total+'</b><span>En total</span></div></div>'
+      + '<div class="citas">'+d.citas.map(dibujar).join('')+'</div>';
+  }catch(e){
+    caja.innerHTML='<div class="aviso error"><b>Error</b>'+esc(e.message)+'</div>';
+  }
+}
+
+function dibujar(c){
+  const abierta = c.estado==='Agendada';
+  const etq = c.estado==='Atendida' ? '<span class="etq e-atendida">Atendida</span>'
+            : c.estado==='No asistió' ? '<span class="etq e-no">No asistió</span>'
+            : c.estado==='Cancelada' ? '<span class="etq e-no">Cancelada</span>'
+            : c.vencida ? '<span class="etq e-vencida">Pendiente de marcar</span>'
+            : (c.nueva ? '<span class="etq e-nueva">Persona nueva</span>' : '');
+
+  const acciones = abierta
+    ? '<div class="acciones">'
+      + '<button class="si" onclick="marcar('+c.fila+',\'Atendida\')">Atendió</button>'
+      + '<button class="no" onclick="marcar('+c.fila+',\'No asistió\')">No asistió</button>'
+      + '<button onclick="reagendar('+c.fila+')">Reagendar</button>'
+      + '<button onclick="marcar('+c.fila+',\'Cancelada\')">Cancelar</button>'
+      + '</div>' : '';
+
+  return '<div class="cita'+(c.vencida?' vencida':'')+(abierta?'':' cerrada')+'">'
+    + '<div class="cita-cab"><span class="nom">'+esc(c.nombre)+'</span>'
+    +   '<span class="cuando">'+esc(c.cuando)+'–'+esc(c.hasta)+'</span></div>'
+    + '<div class="meta">'+esc(c.dia)+(c.lugar?' · '+esc(c.lugar):'')
+    +   ' · '+esc(c.modalidad)
+    +   (c.atencion==='Virtual'?' · <b>Virtual</b>':'')
+    +   (c.contacto?' · '+esc(c.contacto):'')
+    +   (c.motivo?'<br>'+esc(c.motivo):'')+'</div>'
+    + (c.codigo?'<div class="cod">'+esc(c.codigo)+'</div>':'')
+    + etq + acciones + '</div>';
+}
+
+
+// ---------------------------------------------------------- reagendar
+let REAG = null;
+
+function reagendar(fila){
+  const c = (window.CITAS||[]).filter(x=>x.fila===fila)[0];
+  if(!c) return;
+  REAG = c;
+  const hoy = new Date().toISOString().slice(0,10);
+  document.getElementById('reagCaja').innerHTML =
+      '<div class="carta">'
+    + '<p class="reag-tit">Mover la cita de <b>'+esc(c.nombre)+'</b></p>'
+    + '<p class="reag-sub">Ahora: '+esc(c.dia)+' '+esc(c.cuando)+'</p>'
+    + '<div class="rejilla" style="margin-top:12px">'
+    +   '<div class="campo"><label for="reagFecha">Nuevo día</label>'
+    +     '<input id="reagFecha" type="date" value="'+hoy+'" onchange="reagDia()"></div>'
+    +   '<div class="campo"><label for="reagHora">Hora</label>'
+    +     '<input id="reagHora" type="time" value="'+esc(c.cuando.slice(11,16)||'09:00')+'"></div>'
+    +   '<div class="campo ancho"><label for="reagDur">Duración (min)</label>'
+    +     '<input id="reagDur" type="number" min="15" step="15" value="'+(c.duracion||60)+'"></div>'
+    + '</div>'
+    + '<div id="reagDispo"></div>'
+    + '<button class="btn btn-enviar" onclick="reagGuardar()">Mover la cita</button>'
+    + '<button class="btn btn-suave" onclick="reagCerrar()">Dejarla como está</button>'
+    + '<div id="reagSalida"></div>'
+    + '</div>';
+  document.getElementById('reagSeccion').hidden = false;
+  document.getElementById('reagSeccion').scrollIntoView({behavior:'smooth',block:'center'});
+  reagDia();
+}
+
+function reagCerrar(){
+  REAG = null;
+  document.getElementById('reagSeccion').hidden = true;
+  document.getElementById('reagCaja').innerHTML = '';
+}
+
+async function reagDia(){
+  const f = val('reagFecha');
+  const caja = document.getElementById('reagDispo');
+  if(!f || !caja) return;
+  try{
+    const d = await pedir({accion:'agendaDia',profesional:PROF,fecha:f});
+    if(!d.disponibilidad){ caja.innerHTML=''; return; }
+    const x = d.disponibilidad;
+    caja.innerHTML = '<div class="dispo'+(x.especial?' especial':'')+'">'
+      + '<b>'+esc(x.dia)+' '+esc(x.fecha)+' · '+esc(x.lugar)+'</b>'+esc(x.nota)+'</div>';
+  }catch(e){ caja.innerHTML=''; }
+}
+
+async function reagGuardar(forzar){
+  if(!REAG) return;
+  const f = val('reagFecha'), h = val('reagHora');
+  if(!f || !h) return;
+  const salida = document.getElementById('reagSalida');
+  salida.innerHTML = '<div class="aviso neutro">Moviendo…</div>';
+  try{
+    const d = await pedir({accion:'agendaMover', profesional:PROF, punto:PUNTO,
+      fila:REAG.fila, cuando:f+'T'+h, duracion:val('reagDur')||'60',
+      forzar: forzar?'si':''});
+
+    if(!d.creada){
+      salida.innerHTML = '<div class="aviso neutro"><b>'+esc(d.mensaje)+'</b>'
+        + d.choques.map(x=>esc(x.nombre)+' · '+esc(x.cuando)).join('<br>')
+        + (d.sugerencias&&d.sugerencias.length
+           ? '<p style="margin-top:9px">Huecos libres:</p>'
+             + d.sugerencias.map(s=>'<button class="chip" onclick="reagTomar(\''+s.iso+'\')">'
+                 +esc(s.texto)+'</button>').join(' ')
+           : '')
+        + '<button class="btn btn-suave" onclick="reagGuardar(true)">'
+        + 'Moverla igual, aunque coincida</button></div>';
+      return;
+    }
+    salida.innerHTML = '<div class="aviso ok"><b>Cita movida</b>'
+      + esc(d.nombre)+'<br>Antes: '+esc(d.antes)+'<br>Ahora: '+esc(d.ahora)
+      + (d.forzada?'<br>Coincide con otra cita.':'')
+      + (d.disponibilidad&&d.disponibilidad.especial
+         ? '<br>Ese día hay salida a comunidad.':'')+'</div>';
+    setTimeout(()=>{ reagCerrar(); listar(); }, 1600);
+  }catch(e){
+    salida.innerHTML = '<div class="aviso error"><b>No se pudo mover</b>'+esc(e.message)+'</div>';
+  }
+}
+
+function reagTomar(iso){
+  document.getElementById('reagFecha').value = iso.slice(0,10);
+  document.getElementById('reagHora').value  = iso.slice(11,16);
+  reagDia();
+  reagGuardar();
+}
+
+async function marcar(fila,estado){
+  try{
+    await pedir({accion:'agendaEstado',fila:fila,estado:estado,
+                 profesional:PROF, punto:PUNTO});
+    listar();
+  }catch(e){
+    document.getElementById('listaSalida').insertAdjacentHTML('afterbegin',
+      '<div class="aviso error"><b>No se pudo actualizar</b>'+esc(e.message)+'</div>');
+  }
+}
+
+// fecha de hoy por defecto
+document.getElementById('fecha').value = new Date().toISOString().slice(0,10);
+if(!PROF){
+  document.querySelector('.envoltura').innerHTML=
+    '<p class="eyebrow">Paz y Esperanza · Ecuador</p>'
+   +'<h1>Falta indicar la agenda</h1>'
+   +'<div class="aviso error" style="margin-top:14px"><b>Enlace incompleto</b>'
+   +'Este enlace no dice de quién es la agenda. Pide el enlace correcto a la persona '
+   +'que te lo compartió: debe terminar en <b>&prof=</b> seguido de sus iniciales.</div>';
+}else{
+  cambiarAtencion();
+  cambiarFecha();
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,2834 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1B2027">
+<title>Escala Warwick · Paz y Esperanza</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#3F4A3C">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Atención PyE">
+<link rel="apple-touch-icon" href="icono-192.png">
+<link rel="icon" type="image/png" href="icono-192.png">
+<style>
+:root{
+  --tinta:#1B2027; --papel:#E9EBE6; --carta:#FFFFFF; --oliva:#3F4A3C;
+  --senal:#C4442E; --apagado:#7A8579; --linea:#CFD4CB;
+  --azul:#1F3864; --azul-fila:#2E5395; --azul-suave:#DCE6F1;
+  --mono:ui-monospace,"SF Mono","Roboto Mono","DejaVu Sans Mono",monospace;
+  --sans:ui-sans-serif,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{font-family:var(--sans);background:var(--papel);color:var(--tinta);
+     min-height:100dvh;padding:20px 16px calc(28px + env(safe-area-inset-bottom))}
+.envoltura{max-width:600px;margin:0 auto}
+
+.eyebrow{font-size:11px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--oliva)}
+h1{font-size:22px;font-weight:600;letter-spacing:-.02em;margin-top:4px}
+.sub{font-size:13px;color:var(--apagado);margin-top:4px}
+.regla{margin-top:12px;padding:10px 12px;background:#EEF0F3;border-left:3px solid var(--apagado);
+       border-radius:6px;font-size:12.5px;line-height:1.5;color:#3A424C}
+
+.modo{display:flex;gap:2px;background:var(--linea);padding:2px;border-radius:10px;margin:20px 0}
+.modo button{flex:1;padding:10px 3px;border:0;background:transparent;border-radius:8px;
+             font-family:inherit;font-size:12.5px;font-weight:600;color:var(--oliva);cursor:pointer}
+.modo button[aria-selected="true"]{background:var(--carta);color:var(--tinta);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.vista{display:none} .vista.on{display:block}
+
+.loc{margin:16px 0 0;background:var(--carta);border:1px solid var(--linea);
+  border-radius:10px;padding:11px 13px;display:flex;align-items:center;gap:11px}
+.loc label{margin:0;white-space:nowrap;font-size:10px}
+.loc.fijo{display:block;background:var(--oliva);border-color:var(--oliva);padding:13px 15px}
+.loc.fijo label{color:#9FB09C;display:block;margin-bottom:3px}
+.fijo-nombre{display:block;color:#fff;font-size:16px;font-weight:600;letter-spacing:-.01em}
+.fijo-loc{display:block;color:#C7D3C4;font-size:12.5px;margin-top:2px}
+.loc select{font-size:14px;padding:7px 8px;border:0;background:transparent;font-weight:600;
+  color:var(--oliva);width:auto;flex:1}
+.paso{margin-top:22px}
+.paso-cabeza{display:flex;align-items:baseline;gap:9px;margin-bottom:11px}
+.paso-num{font-family:var(--mono);font-size:12px;font-weight:700;color:var(--oliva)}
+.paso-titulo{font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase}
+.carta{background:var(--carta);border:1px solid var(--linea);border-radius:12px;padding:16px}
+
+input,select,textarea{font-family:inherit;font-size:16px;padding:12px;border:1px solid var(--linea);
+  border-radius:8px;background:#FBFBFA;color:inherit;width:100%}
+textarea{font-size:14px;min-height:70px;resize:vertical}
+input:focus-visible,button:focus-visible,textarea:focus-visible{outline:2px solid var(--oliva);outline-offset:2px}
+label{font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--oliva);
+      display:block;margin-bottom:6px}
+
+.hallazgos{margin-top:12px;display:flex;flex-direction:column;gap:8px;max-height:360px;overflow-y:auto}
+.persona{text-align:left;width:100%;background:#FBFBFA;border:1px solid var(--linea);
+         border-radius:10px;padding:12px 13px;cursor:pointer;font-family:inherit;color:inherit;display:block}
+.persona:hover{border-color:var(--oliva)}
+.persona[disabled]{opacity:.5;cursor:not-allowed}
+.persona .nom{font-size:15px;font-weight:600}
+.persona .meta{font-size:11.5px;color:var(--apagado);margin-top:3px}
+.persona .cod{font-family:var(--mono);font-size:10px;color:var(--apagado);margin-top:5px;word-break:break-all}
+.marca-est{display:inline-block;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;margin-top:6px}
+.est-sin{background:#EEF0F3;color:#3A424C}
+.est-falta{background:#FDF3E3;color:#7A5410}
+.est-listo{background:#E3EFE0;color:#2C351F}
+.est-no{background:#FBEBE8;color:#7B241A}
+.aprox{display:inline-block;margin-left:6px;padding:2px 8px;border-radius:20px;font-size:10px;
+  font-weight:700;background:#EDEFF2;color:#5A6570}
+.pista{font-size:11.5px;color:var(--apagado);line-height:1.45;margin:2px 0 8px;padding:8px 10px;
+  background:#EEF0F3;border-radius:7px}
+
+.elegido{background:var(--oliva);color:#fff;border-radius:12px;padding:16px}
+.elegido .nom{font-size:18px;font-weight:600}
+.elegido .meta{font-size:12px;opacity:.85;margin-top:4px}
+.elegido .cod{font-family:var(--mono);font-size:10.5px;opacity:.75;margin-top:8px;word-break:break-all}
+.auto{display:flex;gap:6px;align-items:center;margin-top:13px;flex-wrap:wrap}
+.chip-lbl{font-size:10px;letter-spacing:.09em;text-transform:uppercase;opacity:.7}
+.chip{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);color:#fff;
+      border-radius:20px;padding:7px 14px;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer}
+.chip[aria-pressed="true"]{background:#fff;color:var(--oliva);border-color:#fff}
+.cambiar{background:none;border:0;color:#fff;opacity:.7;font-family:inherit;font-size:12px;
+         text-decoration:underline;cursor:pointer;margin-top:13px;padding:0}
+
+.leyenda{display:grid;grid-template-columns:repeat(5,1fr);gap:5px;margin-bottom:14px;
+         font-size:9px;text-align:center;color:var(--apagado);line-height:1.25}
+.leyenda b{display:block;font-family:var(--mono);font-size:12px;color:var(--oliva);margin-bottom:2px}
+.item{padding:14px 0;border-bottom:1px solid var(--linea)}
+.item:last-child{border-bottom:0;padding-bottom:2px}
+.item-txt{font-size:14.5px;line-height:1.45;margin-bottom:11px}
+.item-txt i{font-family:var(--mono);font-size:11px;color:var(--oliva);font-style:normal;
+            margin-right:7px;font-weight:700}
+.escala{display:grid;grid-template-columns:repeat(5,1fr);gap:5px}
+.escala button{padding:12px 2px;border:1px solid var(--linea);background:#FBFBFA;border-radius:8px;
+               font-family:var(--mono);font-size:15px;font-weight:600;color:var(--apagado);cursor:pointer}
+.escala button[aria-pressed="true"]{background:var(--oliva);border-color:var(--oliva);color:#fff}
+.progreso{font-size:12px;color:var(--apagado);text-align:center;margin-top:14px}
+
+.btn{width:100%;padding:15px;border:0;border-radius:10px;font-family:inherit;font-size:15px;
+     font-weight:600;cursor:pointer;margin-top:12px}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn-enviar{background:var(--oliva);color:#fff}
+.btn-tinta{background:var(--tinta);color:var(--papel)}
+.btn-suave{background:transparent;color:var(--apagado);border:1px solid var(--linea);font-size:13px;padding:11px}
+
+.aviso{padding:13px;border-radius:9px;font-size:13.5px;line-height:1.5;margin-top:12px;border-left:3px solid}
+.aviso.error{background:#FBEBE8;border-color:var(--senal);color:#7B241A}
+.aviso.ok{background:#EDF1EC;border-color:var(--oliva);color:#2C351F}
+.aviso.neutro{background:#EEF0F3;border-color:var(--apagado);color:#3A424C}
+.aviso b{display:block;margin-bottom:3px}
+.cargando{display:none;text-align:center;padding:20px;font-size:13px;color:var(--apagado)}
+.cargando.on{display:block}
+.pie{margin-top:28px;font-size:11.5px;color:var(--apagado);line-height:1.6;text-align:center}
+
+/* ===================== FORMULARIO OFICIAL ===================== */
+.hoja{background:#fff;padding:24px;margin-top:16px;border:1px solid var(--linea);border-radius:10px;
+      font-size:12px;color:#000;line-height:1.4}
+.hoja + .hoja{margin-top:24px}
+.logos{display:flex;justify-content:space-between;align-items:center;gap:14px;margin-bottom:20px}
+.logos img{max-height:46px;max-width:31%;object-fit:contain}
+.logo-vacio{flex:1;height:46px;border:1px dashed #bbb;border-radius:4px;display:flex;
+            align-items:center;justify-content:center;font-size:8.5px;color:#999;text-align:center;padding:3px}
+.hoja h2{color:var(--azul);font-size:14px;text-align:center;line-height:1.35;font-weight:700}
+.hoja .sub1{text-align:center;font-style:italic;font-size:11px;margin-top:4px}
+.hoja .sub2{text-align:center;font-size:10.5px;color:#555;margin-top:2px;margin-bottom:14px}
+.hoja h3{color:var(--azul);font-size:11.5px;font-weight:700;margin:16px 0 6px}
+
+table.of{width:100%;border-collapse:collapse;font-size:11px}
+table.of td,table.of th{border:1px solid #9aa5b1;padding:6px 7px;vertical-align:middle}
+table.of td.et{background:var(--azul-suave);font-weight:700;width:22%}
+table.of thead th{background:var(--azul-fila);color:#fff;font-size:9.5px;text-align:center;
+                  line-height:1.25;font-weight:700}
+table.of thead th.izq{text-align:left;font-size:11px}
+table.of tbody tr:nth-child(even){background:#F2F4F7}
+table.of td.c{text-align:center;width:11%}
+.cb{font-family:var(--mono);font-size:12px}
+.puntaje td.et{width:75%}
+.obs{border:1px solid #9aa5b1;min-height:44px;padding:6px;margin-top:4px;font-size:11px}
+.firmas{margin-top:38px;display:flex;gap:34px;flex-wrap:wrap;align-items:flex-end}
+.firma-bloque{flex:1;min-width:210px}
+.firma-linea{border-bottom:1px solid #000;height:46px;position:relative}
+.firma-img{position:absolute;bottom:2px;left:8px;height:40px;width:auto}
+.firma-rot{font-size:10px;color:#444;margin-top:5px;line-height:1.35}
+.firma-rot b{display:block;font-size:11px;color:#000;font-weight:600}
+.comparativa{margin-top:18px;border:1.5px solid var(--azul);border-radius:6px;padding:12px}
+.comparativa h3{margin-top:0}
+.cifras{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:10px 0}
+.cifra{border:1px solid #9aa5b1;padding:9px;text-align:center}
+.cifra b{display:block;font-family:var(--mono);font-size:21px;font-weight:400;color:var(--azul)}
+.cifra span{font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:#555}
+.grupo-card{background:var(--carta);border:1px solid var(--linea);border-radius:11px;
+  padding:13px 14px;cursor:pointer;width:100%;text-align:left;font-family:inherit;color:inherit}
+.grupo-card:hover{border-color:var(--oliva)}
+.grupo-card .cod{font-family:var(--mono);font-size:10.5px;color:var(--apagado);word-break:break-all}
+.grupo-card .tema{font-size:15px;font-weight:600;margin-top:3px}
+.grupo-card .meta{font-size:12px;color:var(--apagado);margin-top:4px}
+
+.cabecera-grupo{background:var(--oliva);color:#fff;border-radius:12px;padding:15px 16px}
+.cabecera-grupo .tema{font-size:17px;font-weight:600}
+.cabecera-grupo .cod{font-family:var(--mono);font-size:10.5px;opacity:.75;margin-top:6px;word-break:break-all}
+.cabecera-grupo .meta{font-size:12px;opacity:.85;margin-top:5px}
+.cabecera-grupo .cambiar{background:none;border:0;color:#fff;opacity:.7;font-family:inherit;
+  font-size:12px;text-decoration:underline;cursor:pointer;margin-top:11px;padding:0}
+
+.fechas-ficha{background:#FBFBFA;border:1px solid var(--linea);border-radius:11px;
+  padding:13px 14px;margin-top:14px}
+.ff-tit{font-size:14px;font-weight:600}
+.ff-ayuda{font-size:11.5px;color:var(--apagado);line-height:1.45;margin-top:3px}
+.fila-fecha{display:flex;align-items:center;gap:10px;padding:8px 0;
+  border-bottom:1px solid var(--linea)}
+.fila-fecha:last-of-type{border-bottom:0}
+.ff-nom{flex:1;font-size:13.5px}
+.ff-pts{font-family:var(--mono);font-size:11px;color:var(--apagado)}
+.fila-fecha input{width:auto;font-size:13.5px;padding:6px 8px;margin:0}
+.rejilla-fechas{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+.rejilla-fechas .campo{margin:0}
+.atajos-fecha{display:flex;flex-wrap:wrap;gap:6px;margin:9px 0 4px}
+.atajos-fecha button{background:#EDF1EC;border:1px solid var(--linea);border-radius:20px;
+  padding:6px 13px;font-size:12px;font-family:inherit;color:#2C351F;cursor:pointer}
+.atajos-fecha button:hover{border-color:var(--oliva);background:#E3EAE1}
+.acciones-ficha{display:flex;gap:8px;margin-top:12px}
+.acciones-ficha .btn{margin-top:0;flex:1}
+.acciones-grupo{display:flex;flex-direction:column;gap:8px;margin-top:12px}
+.acciones-grupo .btn{margin-top:0}
+
+.pgrupo{border:1px solid var(--linea);border-radius:10px;background:#FBFBFA;overflow:hidden}
+.pgrupo + .pgrupo{margin-top:8px}
+.pgrupo.no{opacity:.5}
+.pgrupo.lista{border-color:var(--oliva)}
+.ficha-part{background:#FBFBFA;border:1px solid var(--linea);border-radius:11px;
+  padding:14px;margin-bottom:12px}
+.fp-tit{font-size:15px;font-weight:600}
+.fp-txt{font-size:12.5px;color:var(--apagado);line-height:1.5;margin:4px 0 12px}
+.ficha-part .rejilla{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.sin-dueno{background:#FDF3E3;border-left:3px solid var(--ambar);border-radius:10px;
+  padding:13px 14px;margin-bottom:12px;color:#5C4210}
+.sd-tit{font-size:14.5px;font-weight:600}
+.sd-txt{font-size:12.5px;line-height:1.5;margin-top:4px;opacity:.9}
+.sd-fila{display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+  padding:10px 0;border-bottom:1px solid rgba(0,0,0,.08)}
+.sd-fila:last-of-type{border-bottom:0}
+.sd-nom{flex:1;min-width:130px;font-size:13.5px;font-weight:600}
+.sd-det{display:block;font-size:11px;font-weight:400;opacity:.75;margin-top:1px}
+.sd-fila select{width:auto;min-width:140px;font-size:13px;padding:7px 8px;margin:0}
+.sd-btn{background:var(--oliva);color:#fff;border:0;border-radius:8px;
+  padding:8px 14px;font-size:13px;font-family:inherit;cursor:pointer}
+.etq-leido{display:inline-block;margin-left:7px;padding:1px 8px;border-radius:20px;
+  font-size:10px;font-weight:600;background:#FDF3E3;color:#7A5410;vertical-align:1px}
+.pgrupo-fila{display:flex;align-items:stretch}
+.pgrupo-fila .pgrupo-cab{flex:1}
+.pgrupo-lapiz{background:none;border:0;border-left:1px solid var(--linea);
+  padding:0 14px;font-size:15px;color:var(--apagado);cursor:pointer;font-family:inherit}
+.pgrupo-lapiz:hover{color:var(--oliva);background:#F2F4F0}
+.pgrupo-cab{display:flex;align-items:center;gap:10px;padding:12px 13px;cursor:pointer;
+  background:none;border:0;width:100%;text-align:left;font-family:inherit;color:inherit}
+.pgrupo-cab:disabled{cursor:not-allowed}
+.pgrupo .nom{flex:1;min-width:0;font-size:14.5px;font-weight:600;overflow:hidden;
+  text-overflow:ellipsis;white-space:nowrap}
+.pgrupo .sub{font-size:11.5px;color:var(--apagado);font-weight:400;margin-top:2px}
+.pgrupo .marca{font-family:var(--mono);font-size:13px;font-weight:700;white-space:nowrap}
+.pgrupo .marca.ok{color:var(--oliva)} .pgrupo .marca.falta{color:var(--apagado)}
+.pgrupo-items{padding:0 13px 13px;border-top:1px solid var(--linea);background:#fff}
+.pgrupo-items[hidden]{display:none}
+.fila-item{padding:10px 0;border-bottom:1px solid var(--linea)}
+.fila-item:last-child{border-bottom:0}
+.fila-item p{font-size:13px;line-height:1.4;margin-bottom:8px}
+.fila-item p i{font-family:var(--mono);font-size:10.5px;color:var(--oliva);font-style:normal;
+  margin-right:6px;font-weight:700}
+.mini{display:grid;grid-template-columns:repeat(5,1fr);gap:4px}
+.mini button{padding:9px 2px;border:1px solid var(--linea);background:#FBFBFA;border-radius:7px;
+  font-family:var(--mono);font-size:13px;font-weight:600;color:var(--apagado);cursor:pointer}
+.mini button[aria-pressed="true"]{background:var(--oliva);border-color:var(--oliva);color:#fff}
+.mini button.dudosa{border-color:var(--ambar);background:#FDF3E3;color:var(--ambar)}
+
+.resumen-grupo{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:12px 0}
+.resumen-grupo div{background:var(--carta);border:1px solid var(--linea);border-radius:9px;
+  padding:10px;text-align:center}
+.resumen-grupo b{display:block;font-family:var(--mono);font-size:20px;font-weight:400;color:var(--oliva)}
+.resumen-grupo span{font-size:9.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--apagado)}
+
+.sin-emparejar{background:#FDF3E3;border-left:3px solid var(--ambar);border-radius:9px;
+  padding:12px 13px;margin-top:10px;font-size:13px;line-height:1.5;color:#5C4210}
+.sin-emparejar select{margin-top:7px;font-size:14px;padding:8px}
+.subir-esc{display:block;text-align:center;border:1px dashed var(--linea);border-radius:10px;
+  padding:14px;font-size:14px;color:var(--oliva);cursor:pointer;background:#FBFBFA}
+.subir-esc:hover{border-color:var(--oliva)}
+.subir-esc input{display:none}
+/* Casilla para llenar a mano: cuanto más grande y despejada, mejor se lee
+   después, sea que la persona ponga una X, un punto o la rellene entera. */
+.casilla-blanco{display:inline-block;width:17px;height:17px;border:1.4px solid #333;
+  border-radius:2px;background:#fff;vertical-align:middle}
+.chip-claro{background:#EDF1EC;border:1px solid var(--linea);color:var(--oliva)}
+.chip-claro[aria-pressed="true"]{background:var(--oliva);border-color:var(--oliva);color:#fff}
+.lote{border:1px solid var(--linea);border-radius:10px;background:#FBFBFA;margin-top:8px;overflow:hidden}
+.lote.lista{border-color:var(--oliva)}
+.lote.duda{border-color:var(--ambar)}
+.lote-cab{display:flex;align-items:center;gap:10px;padding:11px 12px;cursor:pointer;
+  background:none;border:0;width:100%;text-align:left;font-family:inherit;color:inherit}
+.lote .nom{flex:1;min-width:0}
+.lote .nom b{font-size:14.5px;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lote .nom span{font-size:11.5px;color:var(--apagado)}
+.lote .pts{font-family:var(--mono);font-size:13px;font-weight:700;white-space:nowrap}
+.lote .pts.ok{color:var(--oliva)} .lote .pts.falta{color:var(--ambar)}
+.lote-items{padding:0 12px 12px;border-top:1px solid var(--linea);background:#fff}
+.lote-items[hidden]{display:none}
+.lote select{font-size:13px;padding:7px;margin-top:6px}
+.fecha-hoja{display:flex;align-items:center;gap:9px;flex-wrap:wrap;padding:10px 0 4px}
+.fecha-hoja label{font-size:10px;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--oliva);margin:0}
+.fecha-hoja input{width:auto;font-size:14px;padding:7px 9px}
+.aviso-fecha{font-size:11.5px;color:var(--ambar)}
+
+.nota-metodo{margin-top:16px;padding:9px 11px;border-left:2px solid #9aa5b1;background:#F6F7F9;
+  font-size:9.5px;line-height:1.5;color:#555;border-radius:0 4px 4px 0}
+.nota-metodo b{color:var(--azul)}
+.opcion{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--apagado);margin-top:12px}
+.opcion input{width:auto}
+.pill{display:inline-block;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:700}
+.pill.sube{background:#E3EFE0;color:#2C351F}
+.pill.baja{background:#FBEBE8;color:#7B241A}
+.pill.igual{background:#EEF0F3;color:#3A424C}
+.pill.pend{background:transparent;color:#777;font-weight:400}
+
+@media print{
+  @page{size:A4;margin:12mm}
+  /* min-height:100dvh es del viewport de pantalla; al imprimir generaba una
+     página entera en blanco antes del contenido. */
+  html, body{background:#fff!important;padding:0!important;margin:0!important;
+    min-height:0!important;height:auto!important;font-size:10.5pt}
+  .envoltura{max-width:none;margin:0;padding:0}
+
+  /* lo que solo sirve en pantalla */
+  .no-imprimir, .oculto-print{display:none!important}
+
+  /* Solo se imprime la pestaña abierta. Las demás quedan fuera para que no
+     generen páginas en blanco antes del contenido. */
+  .vista{display:none!important}
+  .vista.on{display:block!important}
+
+  /* En la pestaña grupal solo salen las hojas en blanco de #gImpresion,
+     no la pantalla de trabajo. */
+  #v-grupal .paso, #v-grupal .cabecera-grupo, #v-grupal .acciones-grupo,
+  #v-grupal .resumen-grupo, #gAviso, #gSalida{display:none!important}
+  #gImpresion{display:block!important}
+
+  /* La hoja del formulario. Puede continuar en la página siguiente: una ficha
+     con pre y post no cabe en una sola, y prohibirle partirse hacía que el
+     navegador no la imprimiera. */
+  .hoja{border:0;border-radius:0;padding:0;margin:0;display:block!important}
+  .hoja + .hoja{page-break-before:always; break-before:page}
+
+  /* las tablas pueden continuar, pero una fila no se parte por la mitad */
+  table.of{page-break-inside:auto}
+  table.of tr{page-break-inside:avoid; break-inside:avoid}
+
+  /* los fondos de la tabla oficial deben salir impresos */
+  table.of thead th{background:var(--azul-fila)!important;color:#fff!important;
+    -webkit-print-color-adjust:exact;print-color-adjust:exact}
+  table.of td.et{background:var(--azul-suave)!important;
+    -webkit-print-color-adjust:exact;print-color-adjust:exact}
+  table.of tbody tr:nth-child(even){background:#F2F4F7!important;
+    -webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .nota-metodo{background:#F6F7F9!important;-webkit-print-color-adjust:exact;
+    print-color-adjust:exact;font-size:8pt}
+  .pill{border:1px solid #999}
+  .marca{border-color:#000}
+  .marca.on{background:#000;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"
+        integrity="sha512-GsLlZN/3F2ErC5ifS5QtgpiJtWd43JWSuIgh7mbzZ8zBps+dvLusV+eNQATqgA/HdeKFVgA5v3S/cIrLF7QnIg=="
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script>
+// Si ese CDN no responde, se intenta otro. Sin generador de PDF el botón de
+// "Guardar en Drive" no sirve, así que vale la pena tener respaldo.
+if (typeof html2pdf === 'undefined') {
+  document.write('<scr' + 'ipt src="https://unpkg.com/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js"><\/scr' + 'ipt>');
+}
+</script>
+</head>
+<body>
+<div class="envoltura">
+
+  <div class="no-imprimir">
+  <p class="no-imprimir" style="margin-bottom:14px"><a href="index.html" style="color:#7A8579;text-decoration:none;font-size:12.5px">&larr; Inicio</a></p>
+    <p class="eyebrow">Paz y Esperanza · Ecuador</p>
+    <h1>Escala Warwick</h1>
+    <p class="sub">Busca a la persona por su nombre. Lo demás sale solo.</p>
+    <p class="regla">Se aplica únicamente en <b>terapia individual</b> y desde los
+      <b>14 años</b>. En terapia grupal el código es del grupo entero, así que cada
+      participante se identifica por su nombre: usa la pestaña <b>Grupal</b>.</p>
+
+<div class="loc" id="cajaLoc">
+    <label for="profesional">Profesional</label>
+    <select id="profesional" onchange="cambiarProfesional()">
+      <option value="MN">Milton Naula — Manabí</option>
+      <option value="FC">Fernando Cedeño — Manabí</option>
+      <option value="PV">Paola Vallejo — Guayaquil</option>
+      <option value="PO">Paulina Ortega — Guayaquil</option>
+      <option value="MS">Mariana Solís — Milagro</option>
+      <option value="NR">Narcisa Rubio — Milagro</option>
+    </select>
+  </div>
+
+    <div class="modo" role="tablist">
+      <button role="tab" aria-selected="true"  onclick="verVista('aplicar',this)">Individual</button>
+      <button role="tab" aria-selected="false" onclick="verVista('grupal',this)">Grupal</button>
+      <button role="tab" aria-selected="false" onclick="verVista('ficha',this)">Ficha</button>
+      <button role="tab" aria-selected="false" onclick="verVista('reporte',this)">Reporte</button>
+    </div>
+
+  <!-- ================= APLICAR ================= -->
+  <div class="vista on" id="v-aplicar">
+
+    <section class="paso no-imprimir" id="secCarga">
+      <div class="paso-cabeza"><span class="paso-num">00</span><span class="paso-titulo">Cargar en lote</span></div>
+      <div class="carta">
+        <p class="ayuda" style="margin-bottom:11px">¿Ya aplicaste el Warwick en papel?
+          Sube los escaneos y el sistema los lee y los reparte solo, sin marcar uno por uno.
+          Puedes subir todas juntas: se procesan de a cuatro, con pausas, para no saturar
+          el servicio.</p>
+        <div class="auto" style="margin-bottom:10px">
+          <span class="chip-lbl" style="color:var(--oliva)">Momento</span>
+          <button class="chip chip-claro" id="chipPre"  aria-pressed="true"
+                  onclick="lPonerMomento('pre')">Pre-test</button>
+          <button class="chip chip-claro" id="chipPost" aria-pressed="false"
+                  onclick="lPonerMomento('post')">Post-test</button>
+        </div>
+        <label class="subir-esc">
+          Subir Warwick escaneados
+          <input type="file" id="lEscaneos" accept="image/*,application/pdf" multiple
+                 onchange="lLeerEscaneos(this)">
+        </label>
+        <div class="cargando" id="lCargando"></div>
+        <div id="lSalida"></div>
+      </div>
+    </section>
+
+    <section class="paso" id="secBuscar">
+      <div class="paso-cabeza"><span class="paso-num">01</span><span class="paso-titulo">Participante</span></div>
+      <div class="carta">
+        <input id="buscar" placeholder="Nombre, o el número: 005" oninput="buscarDebounce()" autocomplete="off">
+        <p class="ayuda" style="font-size:11.5px;color:var(--apagado);margin-top:7px;line-height:1.45">
+          Aguanta errores de tipeo. Si no recuerdas cómo se escribe, prueba con el
+          número de participante.</p>
+        <div class="hallazgos" id="hallazgos"></div>
+      </div>
+    </section>
+
+    <section class="paso" id="secElegido" hidden>
+      <div class="paso-cabeza"><span class="paso-num">01</span><span class="paso-titulo">Participante</span></div>
+      <div class="elegido" id="elegido"></div>
+    </section>
+
+    <section class="paso" id="secItems" hidden>
+      <div class="paso-cabeza"><span class="paso-num">02</span><span class="paso-titulo">Respuestas</span></div>
+      <div class="carta">
+        <p class="sub" id="consigna" style="margin-bottom:14px"></p>
+        <div class="leyenda" id="leyenda"></div>
+        <div id="items"></div>
+        <p class="progreso" id="progreso">0 de 7 respondidas</p>
+      </div>
+    </section>
+
+    <section class="paso" id="secGuardar" hidden>
+      <div class="paso-cabeza"><span class="paso-num">03</span><span class="paso-titulo">Guardar</span></div>
+      <div class="carta">
+        <label for="fechaApl">Fecha de aplicación</label>
+        <input id="fechaApl" type="date">
+        <p class="ayuda" style="font-size:11.5px;color:var(--apagado);margin:6px 0 14px;
+           line-height:1.45">Si la escala se aplicó en papel hace días, pon la fecha real:
+           es la que va al reporte, no la de hoy.</p>
+
+        <label for="obs">Observaciones (opcional)</label>
+        <textarea id="obs" placeholder="Notas del aplicador"></textarea>
+        <button class="btn btn-enviar" id="btnGuardar" onclick="guardar()" disabled>Guardar aplicación</button>
+        <div class="cargando" id="cargando">Guardando…</div>
+        <div id="salida"></div>
+      </div>
+    </section>
+  </div>
+
+
+  <!-- ================= GRUPAL ================= -->
+  <div class="vista" id="v-grupal">
+
+    <section class="paso no-imprimir" id="gSelector">
+      <div class="paso-cabeza"><span class="paso-num">01</span><span class="paso-titulo">Grupo</span></div>
+      <div class="carta">
+        <p class="ayuda" style="margin-bottom:11px">Los grupos aparecen aquí cuando se
+          procesa la lista de asistencia de su primera sesión.</p>
+        <div id="gLista"><p class="sub">Cargando…</p></div>
+      </div>
+    </section>
+
+    <section class="paso no-imprimir" id="gElegido" hidden>
+      <div class="paso-cabeza"><span class="paso-num">01</span><span class="paso-titulo">Grupo</span></div>
+      <div class="cabecera-grupo" id="gCabecera"></div>
+      <div class="acciones-grupo">
+        <button class="btn btn-enviar" onclick="abrirGrupoCompleto()">Ver e imprimir todo el grupo</button>
+        <button class="btn btn-suave" onclick="gImprimirBlanco()">Imprimir hojas en blanco</button>
+        <div class="campo" style="margin-bottom:10px">
+          <label for="gFechaLote">Fecha de aplicación del grupo</label>
+          <input id="gFechaLote" type="date">
+          <p class="ayuda" style="font-size:11.5px;color:var(--apagado);margin-top:6px;
+             line-height:1.45">Se aplica a todas las hojas del lote. Si alguna trae su
+             fecha escrita, se respeta la de la hoja.</p>
+        </div>
+        <label class="subir-esc">
+          Subir hojas escaneadas
+          <input type="file" id="gEscaneos" accept="image/*,application/pdf" multiple
+                 onchange="gLeerEscaneos(this)">
+        </label>
+      </div>
+      <div class="cargando" id="gCargando"></div>
+      <div id="gAviso"></div>
+    </section>
+
+    <section class="paso no-imprimir" id="gGrilla" hidden>
+      <div class="paso-cabeza"><span class="paso-num">02</span><span class="paso-titulo">Respuestas</span></div>
+      <div class="resumen-grupo" id="gResumen"></div>
+      <div id="gSinDueno"></div>
+      <div id="gParticipantes"></div>
+      <button class="btn btn-enviar" id="gGuardar" onclick="gGuardarTodo()" disabled>Guardar</button>
+      <div id="gSalida"></div>
+    </section>
+
+    <div id="gImpresion"></div>
+  </div>
+
+  <!-- ================= FICHA ================= -->
+  <div class="vista" id="v-ficha">
+    <section class="paso no-imprimir">
+      <div class="paso-cabeza"><span class="paso-num">01</span><span class="paso-titulo">Buscar</span></div>
+      <div class="carta">
+        <input id="buscarF" placeholder="Nombre, código o número: 005" oninput="buscarDebounce('F')" autocomplete="off">
+        <div class="hallazgos" id="hallazgosF"></div>
+      </div>
+    </section>
+    <div id="fichaSalida"></div>
+  </div>
+
+  <!-- ================= REPORTE ================= -->
+  <div class="vista" id="v-reporte">
+    <section class="paso no-imprimir">
+      <div class="paso-cabeza"><span class="paso-num">01</span><span class="paso-titulo">Filtrar</span></div>
+      <div class="carta">
+        <input id="filtro" placeholder="Nombre o zona (MT) — vacío = todos">
+
+        <div class="rejilla-fechas">
+          <div class="campo">
+            <label for="repDesde">Desde</label>
+            <input id="repDesde" type="date">
+          </div>
+          <div class="campo">
+            <label for="repHasta">Hasta</label>
+            <input id="repHasta" type="date">
+          </div>
+        </div>
+        <p class="limite">Se mira la fecha del post-test, que es la que cierra el
+          proceso. Déjalas vacías para incluir todo.</p>
+
+        <div class="atajos-fecha">
+          <button onclick="rangoMes(0)">Este mes</button>
+          <button onclick="rangoMes(-1)">Mes pasado</button>
+          <button onclick="rangoTrimestre()">Trimestre</button>
+          <button onclick="rangoAnio()">Todo el año</button>
+          <button onclick="rangoLimpiar()">Sin filtro</button>
+        </div>
+
+        <label class="opcion"><input type="checkbox" id="soloCompletos" checked>
+          Solo procesos completos (con pre y post)</label>
+        <label class="opcion"><input type="checkbox" id="anon"> Ocultar nombres al imprimir</label>
+        <button class="btn btn-tinta" onclick="cargarReporte()">Generar reporte</button>
+      </div>
+    </section>
+    <div id="reporteSalida"></div>
+  </div>
+
+  <p class="pie no-imprimir">Documento confidencial · Fundación Paz y Esperanza<br>
+    Milton Fernando Naula Chimbo</p>
+</div>
+
+<script>
+// ===========================================================================
+//  CONFIGURACIÓN
+// ===========================================================================
+const URL_BACKEND = 'https://script.google.com/macros/s/AKfycbznImdt0wZkkJHl_xu5bWxjdhZAOS3Gyqbw1L086yO4MkGIDizfUBq4SfhdeJm0X1Lh/exec';
+
+// Los tres logos van incrustados abajo: no hay que subirlos a ninguna parte.
+const LOGOS_ALT = ['Financiado por la Unión Europea — Ayuda Humanitaria',
+                   'Diakonie Katastrophenhilfe', 'Paz y Esperanza'];
+const LOGOS = [
+  'data:image/png;base64,'
+  + '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'
+  + 'y3JpxMHlY2bAfHUv85C89/gO5pnDx3c8PJpCaXBsfsA//vjRRQxDfgmUwzS5Tea79dvGtOCqZQ23gMbf1fVndF+/sKBRkaAx'
+  + 'R7j/svuafA/JpKxysISzEvqjt0GpJ0UJ7v1NVZaL5Z8NZUhUx/Ns9XN11g9DWVfJ3S246je3SfmmeKJFfV/e4SAZHZtcL/9o'
+  + 'KGBeqbquSv+xov+ep7c+D3jdvBXK/ao8j02mk+WfDuV3DPCerTf9VNaXm2L9thH52XJe9lCS+Xr2Z3dfv2vU/XJd0DGtrJ+I'
+  + 'f1NZpPSW8vtjkz8fysVC/mhhmN8Oyqw+nKDU9VuhTHa0y7tpDuMPQhnx4kspPoQXxVO2wwj+eiZnZQAfn2vkuNeD4zmo7VJ4'
+  + '7g+RlNnykNzc3N7cJNPd26Hcfrm5uwFJGf8GJvFQErk/rPv6bkMvJ9ldUqZ32XT91rmrepnc5mVyV65/xE95Pm90OOoF4OUw'
+  + 'q+Hw0djLQNExjP574yl/GpT7SVlWu3FRztdvVSngqBSr9bisvk/xpVFi17Ul8kxbjljZ8VxXIwJDcP7dMfmvLCSO6HCzztHI'
+  + 'e0l3g8DROO4F00o0HPehOMaAcH8GlNlisa5r+PnmqNQaHMi6Xi9n34/NeyGTy0uyQCbPuAcSq4R5GptEYojipmXsyqdpl3MR'
+  + 'iZXlgTWCaoZEcZI2cRXyvKhgTEqcpWmGBX5GzoDwfwYUnFucvSsRpa6XCKRezj4KJWi6SCHPLNoiESU5tqVFZJAnrz3m3rdQ'
+  + 'nO4Y2QhFIJrfNoEpvNDUIpHdvNse2r50mfubQHnrzOPsvQGpP5TzGFRtqHzV2hco3f4ExW2egcITOysCiyM8iyNXeWiOXuqT'
+  + 'RJrKUBdZX/LIYf8UKLOnwfb/EZQDQhnwPC9KkjC6mLgiQmnyC5QMoXAjDq6AK//hr8k1Tkw6OgPGAC+ang+66bpP/B2NaHXi'
+  + 'JTkYoaTdODqtGuS7JkCBy/rootEIPJQB1D0A0xvNC54f4d29sT6AZw6uBbCjr3urnB+hrX7KLebgUpEeMj9TUj6Ue3f/3QDW'
+  + '16GAYtdM09QexjuegyJJOHGIuZAiEa6uiGqaukIILjBhOI4pY441S3COkBDVwNq44QOUY+Wbp+xKXRlxkizjpCROfsoSx9K7'
+  + 'FMNQyZCnd8Nf5B+c/YTLWHyUekqfJCy8KiZTCjSnS4TXMVWWsEP2J0CZTOcfFoPJ5IegSLLheEEQeI42Yr+GMrhAUS2wm/BK'
+  + '3zEkcBZ1x7E0bDfddn3fc02FhYYyXNfSLMyJtFR29BiKpzwYd4KJRhi8g2bDb4HFnEbD8X1bEQR6t+9amN4ogdlmG6Z7OoZ/'
+  + 'QF83vAGL0870xX3P1iR2+OlQ1rOyKDcfSdRa3I/h1o+MEl+gyGZQNNW4agpPP13zLRSFmOE+9oJsWlVNoI/+IXbVhGB9CaBQ'
+  + '4LOqim0ZmtGtKt+Lq0k1zRy5H4o/Q1EvNjJLvKYqXWh0K2pS+O2kZRCk031gSIqXYm1l6iocKqMm9sNiPp7iahUiZrlU1Xhc'
+  + 'hCa8v2QF5RRfHKdi3rMWz5usr2U9Tu/SBsypxXu7rrqukrv0sH49kehVRa+6+bGdFOOuy12178GehRIdK2yRxaGrfOmqt77Q'
+  + 'rs47WubYbMQ7tGnWVtNt2yZ2H0J0ghLYpkWLzrPE77oWodjJsXBZ4hbHrGiPx1ARvGwH57pum7ojeHbVVXlZTdpuH5oSr7lJ'
+  + '202KXVcE5oAGE7ZVse26xJbfs3rJG6DMJuPDKrm5rQ6L8ax+b8+1K29v7g51NV5+FIoZdG3se2G26jB2YfSipEybKg28sBof'
+  + 'ExACe7oPLV5y07ZJMaVx1wYGiEAxGReR5yebReM9gtJNkzCgJXQEASRlUlEo0T4DKE6631ZpnLiClbbjLAqibN7GlgSSMp+W'
+  + 'se9HBY39M+PxCl+hWBWuIFrxcUxfHPOX3mPQfR/KrB7nRXrz5d8kL8r39WDLSZmld1++3ORZPn7NxXkVihUUiSvzTrz/HpRj'
+  + '5hpgCk+7BGTCXrXQfalB22aertmY9Qgdllet29DUFL/ZTB9Bydp6XNEybj2A4rebHkrcIhSA1sWu6eh6UOwL31RNv2iLQCNu'
+  + 'foCOS1ftGCFxTrHLPE0xg/3C16DvKyJHVp2orXztk6GsJ+k5kv4Nw1hPZh+Xp4mum9vs1SGzV6GAosaZWCfePoIiPwNlfEwt'
+  + 'DKYvj3EPJbIwtJ5mmchOsgddA1A2nQ9VuPlm6fXpcCcou5PvePTBHvC2ZyhdLykdyBmjDK1k3CXghgpW0jaxAdV0Jb6UFhTH'
+  + '3Fa9eYvZfMSZbiNb0BzXUnC4AKDonw7lHEmfjN8F5b7uc1cwQr/czD6s6CVVt2w3yDbfgTI9QnuNdFxX5ywpoBQwSh4UUX+a'
+  + 'SoqLzZZs14+hdPMsjmiJ3WehYA4eS6xs0YYSOK8qvFtqsgAl98B2BgV/LB0rmLeRY9uWNwaVQ3hZMSzHDbOfAGV5f5oLvivf'
+  + 'aX7Vy0lBJyxvstXiw1BExfKiJCuq9XegzI8x+Ci6/wgKykBssaLEGyFm4RNvvK7cEcfZ8XbzCApV9L2et/VnoaTQg4qcXWwr'
+  + 'n4zkkYL5mJYAUDJX5AaKi1CccLrNkySJ09mmgM5Rs3364h+EMn59LqXBpr3JD+v35dvP4NYUMyNuD6/PqbwKRXPCYtPkKeiK'
+  + 'Rzol7la986g+gnJnCE+hKG7eRiaReDhNobjjdYGSYseb9VMo7sVPeRZK4sgDkdjFDlsbJMXL29SWKBRobtlNOoASTTZVCYqp'
+  + 'yPPUgzeLi3aapdlPgbLr0xuS+e6dUJar9d2X0+zjhyXFjpo2Cz0vqp5KyiK3eJkfqd4rUGjiG0gKP6K5WA9QrHhzlhT+az9F'
+  + 'ukBBfXCCEjvSQEIolc8NRE69SEqOUEBSAIodznbpyYgLbBG6zmmKL75tPh3K/XKR3t4kdzd31eHdUCq4M729LV+/8zUoso+N'
+  + 'boL91Bwx4f0CZZmbRBafdF/fQBlZMbSaxsvEOOmU16CcXQmAstk0rigqTgpQQAPRpCCAYmV1G14TEN+wuegUGS6kOsUMZvBM'
+  + 'XOfKNDQFB7kT19StsP0ZUCZFWhzmafr2WcfL2hNVmhwORVq9biG8AoWmaoEZRayoPZ4lRSJy3NXgGUisbFFT+AUoaH1NQxv7'
+  + 'l3SPCaeg6J+H0oChS9d313T1BAUEwCsfQxGJlVRdYrGEtdPDONbB+moxuQ+trw6tr9kBX5WYrmMqZtROQdDhxbvP777Atl2s'
+  + 'ZpPZYvVefx5vXa9w3amPj33JSnDEDh2zpboHKJJfbOZFYFlOWG63MXjMPRT+KRROA88z9w3ViTcdTq88A+XkPEaeexomdnCY'
+  + 'ZTP1VQXa85A+QOFxgYVDEVqqBa+W+erAzXdbcIOgm9tuQHc5xWYa6IoVdmAa6yAhkSXrXvZToNwv18u3ZjV8M2y2xuUQPgil'
+  + '3IWy5Df7IvKDdLvbn7svjpX08LgZF2maFvdt4YEVhmvahBQKtCBCme7Qo3eSbpeBPVTRPgSgzHoo0f3sMZT9+DyfkpYBuDHp'
+  + 'ZpJFYVJMV/3Y1x6hEFE007Yu0jgtMPeRl8Hd2axyvPCIY0BmtNjlcRBXbevL8J3a56EfgBVd/gwoNHvuYxNcb7rzJSjtMVJY'
+  + '8IiP26rJkuoYW2KfWDgUwJmc0pVYjx1IAnxqxh2YxEK/LBhAcY7HGMe+3KSlVxW4SBvxWjqoRezk2D2CUh67vjJc2TVhiOFX'
+  + '8EFbRvERFT6cT8H6gnfi3f6xXRU5qN+h+8qKtuvAhzQEDgRyezyCA1pCz6k4cddtmypLW3hx/vq3mk/5gUTUNA/QJE7Kssx8'
+  + 'J8yj87KcDCMoTpTnORqfvonL2RpBlt/qAtG8uMSu3KZz9ANRd2O8LAUmIopAljgoKbcZmFVnKE6cp9lZUvKAISMrzMsiC2wv'
+  + 'T6A3g/PgiA7IkMPH4m4NWejIAi7N0uWBD++XI3IBKMV5URQZ2H3CtealRVkmngd3o5z9FCjvXzIKZ/Y/CmVAZNPGJR8lzcat'
+  + 'PAzNcmydPwe+c6wK3jKoANcxZNw7AJd5tHA4He6ywMnWcD6FwfkUy8X7TYUdscSwoRK4HW52jD62iCO8bjuXAncPcdFIqNs1'
+  + 'VQMuZ8ELhLqw/+EAuuXAUx1LBSMNoYBl6PTTNeDgCA8PEwhvOPTF4ZmWLv68mcfV+1ZYq8Eovr//YH7KUOBFWWSwXTVDAzeR'
+  + 'l6UnHTMvq4ahqxLdU2AoiCLmHQ5HeJdAWEGWxRGm37GiosP98PeQwEWiBM4hQ6d0LwFfI7jlUlCgWCKCLSbz4LxL/JDF89Re'
+  + 'ZgWW5WXNgFMoZnLv0cuGrghYGZzm6cMElhOuCCfjizNDCSoZ/Awos+WkqqaL98zSz2YT8G+X9x9Mrxs+CuLF1vsq8pTpnW88'
+  + 'g3Otw6d3kUuG5LBP+8GELPY0nXxevu7lKDyWPFpimHm0zjEnXKobDU5QBnTOmaFQzrUyHLkakg+uU/x2KOtxnhaL94zd1zWm'
+  + '19X1B6GA3ujXLb/mR9cj/h9c7PzxJQweD655/rT7xnmV89NduAb6sA9f4K/hQKCtNTgFNdCbL0024B+XUV8bPHPE4M1MX9fp'
+  + 'YniNETwV4ykIXUPEFXnx+hzNDDdd09XXGVySDW7GBd/h/8HPgLKcHarkNml267ctTlTPwK/ZVcnN3WH3sQjJP6Hg8DKOfYmf'
+  + 'W+1bA7zv5zgqeVMeNpM3dl2z+QaXBLk9HKa/QSrET4LiJFUCUPhfAmUNYkIHJW+Ssn6Lsp/RCS685fY2XdTL/00oGM3iGKPP'
+  + '3t/jrVDKu3/76aq774amnKCsyvOKn8li+T8K5alt8R9DAf3eJP/2S0W+dVCynpanCa51/b/afX2z4sV/q1Pq05JR+e6tUGaz'
+  + 'foLrBzK5/oCC8ay/EEq/yFe6+j6UXjBmk12/WFv1Y5lcuK3gO0NxuRcX5WAGlyQVhhtdf04bMoM3gRkMOO5dUCbfdR0xve7u'
+  + 'bel1p95qsrv7cvtZ6XXsn9GX/bf5KctVdpdU6d1pous1LTE7eTLzdXJbNMlduZv9h1D6QcYXNtL8yQlaw5fDuBmO+/Tua7mc'
+  + 'VGWzm5TVdNkHDy1fm2+kFBbTslzvpmU1+ZGcR1zrQXvHYg8crqGONzyz/A4RFE3X5SH+ycOfqsx8wrd6QGviCLw/+9ImkvBA'
+  + 'UdV07W1LGr4dynK3q9fg0PdrGNUvb/4wO4nKYrI+LOGWy7L4H4KCq6K4lvrmRuKJ5HgYvXf9zCkRx34NAdewkzFV0hB/eLWV'
+  + 'a1qpo49wzyNFEV58Ldl2PVclwudBoTs8TRY0awjX8qryav1isFdZNot+aGYyW7xpD6KXoIDIG0GWJr755q5HJFKQJ8+GicIp'
+  + 'N8pTmxXoVkE4RyJ/ZNfIr1pbcZM8MEXCKrZjvCQKElH9JAsNIn0mlEexXIt6k91mq+nsWe+krpOkXNTvmqd8CQqmE6TH1T55'
+  + 'e26oTKSoq0L9mfEokch+1k0dnECksfy4Pv2PQhFpdEVkQeV2ElvSCxViTGXRpsabhsk+AGV9OGzucB2vXb24fFifx5Lh7O1N'
+  + 'uj7s6tniE6AoTt6taewVTzhRFnk6/CrIOCuCkx90QFfqJ1qGoiSJiijHJyg0iU56WNRAolCaM5SCQpFEWYLujOHgZp6wnCTz'
+  + 'HC9h1cwA7hWlPjVuJGFKnUQ3SGFx9kWQsOBYpOLmTWjxqhN1qa3wI3aAD8WCK/XxUD9O0vBqkGP0Mf9Q1YtmwUfWuk+z5ObL'
+  + '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'
+  + '/g/o1gD5vrif4wAAAABJRU5ErkJggg=='
+  ,
+  'data:image/png;base64,'
+  + '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'
+  ,
+  'data:image/png;base64,'
+  + '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'
+  + 'RYGDAAAAAElFTkSuQmCC'
+
+];
+
+let INFO=null, PERSONA=null, MOMENTO='pre';
+let respuestas=[null,null,null,null,null,null,null], temporizador=null;
+
+// ---------------------------------------------------------- profesional
+// Quién está usando el sistema. Viaja en el enlace (?prof=PV) para que cada
+// una guarde su acceso ya fijado. De aquí sale su localidad, su agenda y la
+// firma de sus documentos.
+const PROFESIONALES = {
+  MN:{nombre:'Milton Naula',   loc:'MB', localidad:'Manabí'},
+  FC:{nombre:'Fernando Cedeño',loc:'MB', localidad:'Manabí'},
+  PV:{nombre:'Paola Vallejo',  loc:'G',  localidad:'Guayaquil'},
+  PO:{nombre:'Paulina Ortega', loc:'G',  localidad:'Guayaquil'},
+  MS:{nombre:'Mariana Solís',  loc:'M',  localidad:'Milagro'},
+  NR:{nombre:'Narcisa Rubio',  loc:'M',  localidad:'Milagro'}
+};
+function profesionalActual(){
+  const u=new URLSearchParams(location.search).get('prof');
+  if(PROFESIONALES[u]){ recordarProfesional(u); return u; }
+
+  // Al instalar la app como icono, se abre sin ?prof= y todas caerían en el
+  // profesional por defecto. Por eso se recuerda quién la instaló.
+  const guardado = leerProfesionalGuardado();
+  if(guardado) return guardado;
+
+  // compatibilidad con los enlaces viejos que llevaban ?loc=
+  const l=new URLSearchParams(location.search).get('loc');
+  const porLoc={MB:'MN',G:'PV',M:'MS'};
+  return porLoc[l] || 'MN';
+}
+
+/** Guarda quién es, para que el icono de la app abra con su nombre. */
+function recordarProfesional(p){
+  try{ localStorage.setItem('pye_prof', p); }catch(e){}
+}
+function leerProfesionalGuardado(){
+  try{
+    const v = localStorage.getItem('pye_prof');
+    return (v && PROFESIONALES[v]) ? v : null;
+  }catch(e){ return null; }
+}
+function cambiarProfesional(){
+  if(typeof ADMIN!=='undefined' && !ADMIN) return;
+  const v=document.getElementById('profesional').value;
+  const u=new URL(location.href);
+  u.searchParams.set('prof',v);
+  u.searchParams.delete('loc');
+  if(ADMIN) u.searchParams.set('admin','1');
+  location.replace(u.toString());
+}
+const PROF = profesionalActual();
+const LOC  = PROFESIONALES[PROF].loc;
+
+// El selector solo aparece con ?admin=1, que es el enlace del responsable del
+// sistema. Cada profesional entra con su enlace fijo y no puede cambiarse a
+// otra persona ni por descuido ni a propósito.
+const ADMIN = new URLSearchParams(location.search).get('admin')==='1';
+
+function fijarProfesional(){
+  const caja=document.getElementById('cajaLoc');
+  if(!caja) return;
+  const q=PROFESIONALES[PROF];
+  if(ADMIN){
+    const sel=document.getElementById('profesional');
+    if(sel) sel.value=PROF;
+    return;
+  }
+  caja.classList.add('fijo');
+  caja.innerHTML='<label>Profesional</label>'
+    +'<span class="fijo-nombre">'+q.nombre+'</span>'
+    +'<span class="fijo-loc">'+q.localidad+'</span>';
+}
+
+
+
+const val=id=>document.getElementById(id).value.trim();
+const esc=t=>String(t==null?'':t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const cb=on=>'<span class="cb">'+(on?'☒':'☐')+'</span>';
+
+// La trazabilidad guarda MUJER / HOMBRE; el formulario oficial dice
+// Femenino / Masculino. Estas dos funciones traducen entre ambos.
+const esMujer  = g => /^\s*(mujer|femenin\w*|fem|f)\s*$/i.test(String(g||''));
+const esHombre = g => /^\s*(hombre|masculin\w*|var[oó]n|masc|m)\s*$/i.test(String(g||''));
+// Sí / No: en blanco NO se marca nada, para no afirmar algo que nadie registró.
+// Aguanta "SI", "Sí", "S" y también "SI - Psicológica", que trae el tipo pegado.
+const esSi = v => /^\s*(s[ií]|s|1|x|verdadero|true)\b/i.test(String(v||''));
+const esNo = v => /^\s*(no|n|0|falso|false)\b/i.test(String(v||''));
+
+function verVista(v,btn){
+  document.querySelectorAll('.vista').forEach(e=>e.classList.remove('on'));
+  document.getElementById('v-'+v).classList.add('on');
+  document.querySelectorAll('.modo button').forEach(b=>b.setAttribute('aria-selected','false'));
+  btn.setAttribute('aria-selected','true');
+  if(v==='grupal' && !GRUPO) gCargarGrupos();
+}
+
+// Acciones que solo leen datos. Se reintentan solas si Google tropieza,
+// porque repetirlas no cambia nada. Las que guardan NO se reintentan: si la
+// primera sí llegó, repetirla podría duplicar la información.
+const SOLO_LECTURA = ['buscar','ficha','grilla','grupos','reporte','items','escala',
+  'margen','hojasBlanco','sinDueno','casosAbiertos','estadoCaso','fechasCaso',
+  'verParticipante','lugarListar','lugarSiguienteNumero','agendaListar',
+  'agendaDia','agendaHuecos','firma'];
+
+const dormirMs = ms => new Promise(r => setTimeout(r, ms));
+
+/**
+ * Habla con el servidor.
+ *
+ * Apps Script a veces devuelve una página de error en vez de datos: un
+ * tropiezo pasajero de Google, más frecuente tras un rato sin uso. Antes eso
+ * llegaba a la pantalla como "Unexpected token '<'". Ahora se detecta, y si la
+ * acción solo lee, se reintenta sola con una pequeña espera.
+ */
+
+/**
+ * Lee la respuesta reconociendo la página de error de Google.
+ * Para los envíos grandes, que no pasan por pedir(). No reintenta.
+ */
+async function leerRespuesta(r){
+  const txt = await r.text();
+  if(txt.trim().charAt(0) === '<')
+    throw new Error('El servidor de Google tuvo un tropiezo y no se sabe si guardó. '
+      + 'Revisa si la información ya aparece antes de volver a enviarla.');
+  return JSON.parse(txt);
+}
+
+async function pedir(datos){
+  if(URL_BACKEND.indexOf('PEGA_AQUI')===0)
+    throw new Error('Falta la dirección del servidor: reemplaza PEGA_AQUI_TU_URL_DE_APPS_SCRIPT en este archivo.');
+  const lectura = SOLO_LECTURA.indexOf(datos.accion) !== -1;
+  const intentos = lectura ? 3 : 1;
+  let ultimo = null;
+
+  for(let i=0; i<intentos; i++){
+    if(i > 0) await dormirMs(1200 * i);     // 1.2 s, luego 2.4 s
+    try{
+      const r = await fetch(URL_BACKEND,{method:'POST',body:new URLSearchParams(datos)});
+      const txt = await r.text();
+
+      // ¿vino una página de error en vez de datos?
+      if(txt.trim().charAt(0) === '<'){
+        ultimo = new Error('TROPIEZO');
+        continue;
+      }
+      const d = JSON.parse(txt);
+      if(!d.exito) throw new Error(d.error||'error sin detalle');
+      return d;
+    }catch(e){
+      // un error de la aplicación (datos inválidos, etc.) no se reintenta
+      if(e.message !== 'TROPIEZO' && !/Failed to fetch|NetworkError/i.test(e.message))
+        throw e;
+      ultimo = e;
+    }
+  }
+
+  // se agotaron los intentos
+  if(lectura)
+    throw new Error('El servidor de Google no respondió bien, ni reintentando. '
+      + 'Espera unos segundos y vuelve a intentarlo.');
+  throw new Error('El servidor de Google tuvo un tropiezo y no se sabe si guardó. '
+    + 'Antes de volver a enviar, revisa si la información ya aparece: '
+    + 'así evitas duplicarla.');
+}
+
+// ---------------------------------------------------------- búsqueda
+function buscarDebounce(suf){
+  clearTimeout(temporizador);
+  temporizador=setTimeout(()=>hacerBusqueda(suf||''),320);
+}
+
+async function hacerBusqueda(suf){
+  const caja=document.getElementById('hallazgos'+suf);
+  caja.innerHTML='<p class="sub">Buscando…</p>';
+  try{
+    const d=await pedir({accion:'buscar',texto:val('buscar'+suf),localidad:LOC,profesional:PROF});
+    if(!d.personas.length){
+      caja.innerHTML='<div class="aviso neutro"><b>Sin coincidencias</b>'
+        +'Las personas aparecen aquí después del primer encuentro, cuando se procesa '
+        +'el audio de la sesión individual.</div>';
+      return;
+    }
+    window['ULTIMA'+suf]=d.personas;
+    const pista = d.hubo_aproximados
+      ? '<p class="pista">No encontré una coincidencia exacta. Estos son los nombres '
+        +'más parecidos, ordenados por cercanía.</p>' : '';
+    caja.innerHTML = pista + d.personas.map((p,i)=>{
+      const bloqueado = suf==='' && p.aplica===false;
+      const cl = p.aplica===false ? 'est-no'
+        : (p.estado==='Sin pre-test'?'est-sin':(p.estado==='Falta post-test'?'est-falta':'est-listo'));
+      return '<button class="persona"'+(bloqueado?' disabled':'')
+        + ' onclick="elegir'+(suf?'Ficha':'')+'('+i+')">'
+        + '<div class="nom">'+esc(p.nombre)+'</div>'
+        + '<div class="meta">'+(p.edad!==''?esc(p.edad)+' años · ':'')
+        +   (p.genero?esc(p.genero)+' · ':'')+(p.zona?esc(p.zona)+' · ':'')
+        +   'desde '+esc(p.primer_encuentro)+'</div>'
+        + '<div class="cod">'+esc(p.codigo)+'</div>'
+        + '<span class="marca-est '+cl+'">'+esc(p.motivo||p.estado)+'</span>'
+        + (p.aproximado?'<span class="aprox">parecido</span>':'')
+        + '</button>';
+    }).join('');
+  }catch(e){
+    caja.innerHTML='<div class="aviso error"><b>No se pudo buscar</b>'+esc(e.message)+'</div>';
+  }
+}
+
+
+// ============================================================================
+//  CARGA EN LOTE  ·  Warwick individuales aplicados en papel
+// ============================================================================
+let LMOMENTO='pre', LHOJAS=[], LCAND=[];
+
+function lPonerMomento(v){
+  LMOMENTO=v;
+  document.getElementById('chipPre').setAttribute('aria-pressed', v==='pre');
+  document.getElementById('chipPost').setAttribute('aria-pressed', v==='post');
+}
+
+// El nivel gratuito de Gemini permite 10 peticiones por minuto. Cada hoja es una
+// petición, así que las tandas se envían de a pocas y con pausa entre ellas.
+// Es más lento pero no se topa, y así nadie tiene que contar archivos.
+const POR_TANDA = 4, PAUSA_MS = 22000;
+// Un PDF de 10 páginas suele leerse incompleto: el modelo se queda en las
+// primeras. Mandarlo en trozos de 3 páginas resuelve eso.
+const PAGINAS_POR_ENVIO = 3;
+const dormir = ms => new Promise(r=>setTimeout(r,ms));
+
+async function lLeerEscaneos(input){
+  const files=[...input.files]; input.value='';
+  if(!files.length) return;
+  const cg=document.getElementById('lCargando');
+  cg.classList.add('on');
+  document.getElementById('lSalida').innerHTML='';
+
+  const tandas=[];
+  for(let i=0;i<files.length;i+=POR_TANDA) tandas.push(files.slice(i,i+POR_TANDA));
+
+  LHOJAS=[]; LCAND=[];
+  let leidas=0, sinFecha=0, incompletas=0, sinDueno=0, fallos=[];
+
+  try{
+    for(let t=0;t<tandas.length;t++){
+      cg.textContent = tandas.length>1
+        ? 'Leyendo tanda '+(t+1)+' de '+tandas.length+'… ('+leidas+' de '+files.length+' listas)'
+        : 'Leyendo '+files.length+' hoja(s)… puede tardar un minuto.';
+
+      const cuerpo=new URLSearchParams();
+      cuerpo.append('accion','leerEscaneos');
+      cuerpo.append('localidad',LOC);
+      cuerpo.append('momento',LMOMENTO);
+      for(const f of tandas[t]){
+        const a = f.type==='application/pdf' ? await gLeerPdf(f) : await gComprimir(f);
+        cuerpo.append('adjunto',a.b64);
+        cuerpo.append('adjuntoMime',a.mime);
+      }
+
+      try{
+        const r=await fetch(URL_BACKEND,{method:'POST',body:cuerpo});
+        const d=await leerRespuesta(r);
+        if(!d.exito) throw new Error(d.error||'error');
+        if(!LCAND.length) LCAND=d.candidatos||[];
+        LHOJAS=LHOJAS.concat(d.hojas.map(h=>({...h,
+          resp:h.respuestas.map(v=>(v>=1&&v<=5)?v:null), fecha:h.fecha||'', abierto:false})));
+        leidas+=d.hojas.length;
+        sinFecha+=d.sin_fecha||0; incompletas+=d.incompletas||0; sinDueno+=d.sin_emparejar||0;
+      }catch(e){
+        fallos.push('tanda '+(t+1)+': '+e.message);
+      }
+
+      // pausa antes de la siguiente, para no agotar el límite por minuto
+      if(t < tandas.length-1){
+        for(let s=Math.round(PAUSA_MS/1000); s>0; s--){
+          cg.textContent='Leídas '+leidas+' de '+files.length+'. '
+            +'Esperando '+s+'s para no saturar el servicio…';
+          await dormir(1000);
+        }
+      }
+    }
+
+    cg.classList.remove('on');
+    if(!LHOJAS.length) throw new Error(fallos.join(' · ') || 'no se pudo leer ninguna hoja');
+    lDibujar({sin_fecha:sinFecha, incompletas:incompletas, sin_emparejar:sinDueno});
+    if(fallos.length) document.getElementById('lSalida').insertAdjacentHTML('afterbegin',
+      '<div class="aviso neutro"><b>'+fallos.length+' tanda(s) fallaron</b>'
+      +esc(fallos.join(' · '))+'<br>Vuelve a subir solo esas hojas.</div>');
+  }catch(e){
+    cg.classList.remove('on');
+    document.getElementById('lSalida').innerHTML=
+      '<div class="aviso error"><b>No se pudo leer</b>'+esc(e.message)+'</div>';
+  }
+}
+
+function lDibujar(d){
+  if(!LHOJAS.length){
+    document.getElementById('lSalida').innerHTML=
+      '<div class="aviso neutro"><b>No reconocí ninguna hoja</b>'
+      +'Revisa que las fotos se vean derechas y con buena luz.</div>';
+    return;
+  }
+  const opciones = ['<option value="">— asignar a —</option>']
+    .concat(LCAND.map(n=>'<option value="'+esc(n)+'">'+esc(n)+'</option>')).join('');
+
+  const filas = LHOJAS.map((h,i)=>{
+    const n=h.resp.filter(x=>x!==null).length;
+    const total=h.resp.reduce((a,b)=>a+(b||0),0);
+    const listo=n===7 && h.nombre;
+    const cls = listo?'lista':(h.nombre?'duda':'duda');
+    return '<div class="lote '+cls+'">'
+      + '<button class="lote-cab" onclick="lAbrir('+i+')">'
+      +   '<span class="nom"><b>'+esc(h.nombre||'Sin asignar')+'</b>'
+      +     '<span>'+(h.leido?'leí: '+esc(h.leido):'nombre ilegible')
+      +     (h.nombre&&!h.seguro?' · por parecido':'')
+      +     (h.fecha?' · '+esc(h.fecha.split('-').reverse().join('/')):' · sin fecha')
+      +     '</span></span>'
+      +   '<span class="pts '+(listo?'ok':'falta')+'">'+(n===7?total+'/35':n+'/7')+'</span>'
+      + '</button>'
+      + '<div class="lote-items" '+(h.abierto?'':'hidden')+'>'
+      +   (h.nombre?'':'<select onchange="lAsignar('+i+',this.value)">'+opciones+'</select>')
+      +   '<div class="fecha-hoja"><label>Fecha de aplicación</label>'
+      +     '<input type="date" value="'+esc(h.fecha||'')+'" '
+      +       'onchange="lFecha('+i+',this.value)">'
+      +     (h.fecha?'':'<span class="aviso-fecha">no se pudo leer del papel</span>')
+      +   '</div>'
+      +   INFO.items.map((t,j)=>
+          '<div class="fila-item"><p><i>'+(j+1)+'</i>'+esc(t)+'</p><div class="mini">'
+          + INFO.niveles.map((nv,k)=>'<button type="button" aria-pressed="'+(h.resp[j]===k+1)+'" '
+              +'onclick="lMarcar('+i+','+j+','+(k+1)+')">'+(k+1)+'</button>').join('')
+          +'</div></div>').join('')
+      + '</div></div>';
+  }).join('');
+
+  const listos=LHOJAS.filter(h=>h.nombre && h.resp.every(x=>x!==null)).length;
+  let avisos='';
+  if(d && d.sin_emparejar) avisos+='<div class="aviso neutro" style="margin-top:10px">'
+    +'<b>'+d.sin_emparejar+' hoja(s) sin dueño</b>Ábrelas y elige a quién corresponden.</div>';
+  if(d && d.incompletas) avisos+='<div class="aviso neutro" style="margin-top:8px">'
+    +'<b>'+d.incompletas+' con filas sin marca clara</b>Las dejé en blanco a propósito: '
+    +'es preferible que las completes tú a que el sistema adivine.</div>';
+  if(d && d.sin_fecha) avisos+='<div class="aviso neutro" style="margin-top:8px">'
+    +'<b>'+d.sin_fecha+' sin fecha legible</b>Ponla a mano: si la dejas vacía se guardará '
+    +'con la fecha de hoy, y eso desalinea el seguimiento.</div>';
+
+  document.getElementById('lSalida').innerHTML =
+      '<p class="ayuda" style="margin-top:12px">Revisa antes de guardar. '
+    + 'Toca un nombre para ver o corregir sus respuestas.</p>'
+    + filas + avisos
+    + '<button class="btn btn-enviar" id="lGuardar" onclick="lGuardar()"'
+    + (listos?'':' disabled')+'>'
+    + (listos?'Guardar '+listos+' de '+LHOJAS.length:'Completa al menos una')+'</button>';
+}
+
+function lAbrir(i){ LHOJAS[i].abierto=!LHOJAS[i].abierto; lDibujar(); }
+function lMarcar(i,j,v){ LHOJAS[i].resp[j]=v; LHOJAS[i].abierto=true; lDibujar(); }
+function lFecha(i,v){ LHOJAS[i].fecha=v; LHOJAS[i].abierto=true; lDibujar(); }
+
+function lAsignar(i,nombre){
+  LHOJAS[i].nombre=nombre;
+  LHOJAS[i].codigo='';   // se resuelve al guardar
+  lDibujar();
+}
+
+async function lGuardar(){
+  const lote=LHOJAS.filter(h=>h.nombre && h.resp.every(x=>x!==null))
+    .map(h=>({codigo:h.codigo, nombre:h.nombre, edad:h.edad,
+              fecha:h.fecha||'', respuestas:h.resp}));
+  if(!lote.length) return;
+
+  // los que se asignaron a mano no traen código: se busca
+  for(const x of lote){
+    if(x.codigo) continue;
+    try{
+      const d=await pedir({accion:'buscar',texto:x.nombre,localidad:LOC,profesional:PROF});
+      if(d.personas.length) x.codigo=d.personas[0].codigo;
+    }catch(e){}
+  }
+
+  const btn=document.getElementById('lGuardar');
+  btn.disabled=true; btn.textContent='Guardando…';
+  try{
+    const d=await pedir({accion:'guardarLote',momento:LMOMENTO,profesional:PROF,
+                         respuestas:JSON.stringify(lote)});
+    let html='<div class="aviso ok"><b>'+d.guardados+' guardadas</b>'
+      +esc(d.nombres.slice(0,8).join(', '))+(d.nombres.length>8?' y otras…':'')+'</div>';
+    if(d.saltados.length) html+='<div class="aviso neutro" style="margin-top:8px">'
+      +'<b>'+d.saltados.length+' quedaron fuera</b>'+esc(d.saltados.join(' · '))+'</div>';
+    document.getElementById('lSalida').innerHTML=html
+      +'<button class="btn btn-suave" onclick="lLimpiar()">Cargar otro lote</button>';
+    LHOJAS=[];
+  }catch(e){
+    document.getElementById('lSalida').innerHTML=
+      '<div class="aviso error"><b>No se pudo guardar</b>'+esc(e.message)+'</div>';
+  }
+}
+
+function lLimpiar(){ LHOJAS=[]; document.getElementById('lSalida').innerHTML=''; }
+
+// ---------------------------------------------------------- elegir
+function elegir(i){
+  const p=window['ULTIMA'][i];
+  if(p.aplica===false) return;
+  PERSONA=p; MOMENTO=p.momento_sugerido;
+  ['secElegido','secItems','secGuardar'].forEach(s=>document.getElementById(s).hidden=false);
+  document.getElementById('secBuscar').hidden=true;
+  pintarElegido(); pintarItems();
+  document.getElementById('secElegido').scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+function pintarElegido(){
+  const p=PERSONA;
+  const chip=(v,txt)=>'<button class="chip" aria-pressed="'+(MOMENTO===v)
+    +'" onclick="ponerMomento(\''+v+'\')">'+txt+'</button>';
+  const alerta = p.aplica===null
+    ? '<div class="meta" style="margin-top:8px;color:#FFD9A0">⚠ Edad no registrada en el audio. '
+      +'Confirma que tenga '+(EDAD_MINIMA||14)+' años o más antes de aplicar.</div>' : '';
+  document.getElementById('elegido').innerHTML=
+      '<div class="nom">'+esc(p.nombre)+'</div>'
+    + '<div class="meta">'+(p.edad!==''?esc(p.edad)+' años · ':'')
+    +   (p.genero?esc(p.genero)+' · ':'')+esc(p.estado)+'</div>'
+    + '<div class="cod">'+esc(p.codigo)+'</div>'+alerta
+    + '<div class="auto"><span class="chip-lbl">Momento</span>'
+    +   chip('pre','Pre-test')+chip('post','Post-test')+'</div>'
+    + '<button class="cambiar" onclick="volverABuscar()">Elegir otra persona</button>';
+}
+
+function ponerMomento(v){ MOMENTO=v; pintarElegido(); }
+
+function volverABuscar(){
+  PERSONA=null;
+  document.getElementById('secBuscar').hidden=false;
+  ['secElegido','secItems','secGuardar'].forEach(s=>document.getElementById(s).hidden=true);
+  document.getElementById('salida').innerHTML='';
+  document.getElementById('obs').value='';
+}
+
+// ---------------------------------------------------------- instrumento
+async function cargarInfo(){
+  try{
+    INFO=await pedir({accion:'items'});
+    document.getElementById('consigna').textContent=INFO.consigna;
+  }catch(e){
+    document.getElementById('hallazgos').innerHTML=
+      '<div class="aviso error"><b>No pude conectar</b>'+esc(e.message)+'</div>';
+  }
+}
+
+function pintarItems(){
+  if(!INFO) return;
+  document.getElementById('leyenda').innerHTML=
+    INFO.niveles.map((n,i)=>'<div><b>'+(i+1)+'</b>'+esc(n)+'</div>').join('');
+  document.getElementById('items').innerHTML=INFO.items.map((t,i)=>
+    '<div class="item"><p class="item-txt"><i>'+(i+1)+'</i>'+esc(t)+'</p><div class="escala">'
+    + INFO.niveles.map((n,j)=>'<button type="button" aria-pressed="false" aria-label="'+esc(n)+'" '
+        +'onclick="marcar('+i+','+(j+1)+',this)">'+(j+1)+'</button>').join('')
+    +'</div></div>').join('');
+  respuestas=[null,null,null,null,null,null,null];
+  actualizarProgreso();
+}
+
+function marcar(i,v,btn){
+  respuestas[i]=v;
+  btn.parentNode.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed','false'));
+  btn.setAttribute('aria-pressed','true');
+  actualizarProgreso();
+}
+
+function actualizarProgreso(){
+  const n=respuestas.filter(r=>r!==null).length;
+  const total=respuestas.reduce((a,b)=>a+(b||0),0);
+  document.getElementById('progreso').textContent=
+    n+' de 7 respondidas'+(n===7?' · puntaje bruto '+total+' de 35':'');
+  document.getElementById('btnGuardar').disabled=!(PERSONA && n===7);
+}
+
+// ---------------------------------------------------------- guardar
+async function guardar(){
+  document.getElementById('cargando').classList.add('on');
+  document.getElementById('salida').innerHTML='';
+  document.getElementById('btnGuardar').disabled=true;
+  try{
+    const d=await pedir({accion:'guardarTest',profesional:PROF,
+      codigo:PERSONA.codigo,nombre:PERSONA.nombre,
+      edad:PERSONA.edad,genero:PERSONA.genero||'',vbg:PERSONA.vbg||'',
+      discapacidad:PERSONA.discapacidad||'',momento:MOMENTO,
+      fecha:val('fechaApl')||'',
+      respuestas:JSON.stringify(respuestas),observaciones:val('obs')});
+    document.getElementById('cargando').classList.remove('on');
+
+    let html='<div class="aviso ok"><b>'+(d.reemplazado?'Aplicación actualizada':'Aplicación guardada')
+      +'</b>'+esc(d.nombre)+' · puntaje bruto '+d.puntaje_bruto+' de 35'
+      +(d.puntaje_metrico!==''?' · métrico '+d.puntaje_metrico:'')+'</div>';
+    if(d.comparacion){
+      const cp=d.comparacion;
+      html+='<div class="aviso ok" style="margin-top:8px"><b>Comparación completa</b>'
+        +'Pre '+cp.pre+' → Post '+cp.post+' · cambio '+(cp.cambio>0?'+':'')+cp.cambio
+        +(cp.porcentaje!==''?' · '+cp.porcentaje+'% de mejora':'')
+        +'<br>'+esc(d.frase)+'</div>';
+    }
+    else if(MOMENTO==='pre')
+      html+='<div class="aviso neutro" style="margin-top:8px"><b>Queda pendiente el post-test</b>'
+          +'Cuando lo apliques, esta persona ya aparecerá con el post sugerido.</div>';
+    html+='<button class="btn btn-suave" onclick="volverABuscar()">Aplicar a otra persona</button>';
+    document.getElementById('salida').innerHTML=html;
+  }catch(e){
+    document.getElementById('cargando').classList.remove('on');
+    document.getElementById('salida').innerHTML=
+      '<div class="aviso error"><b>No se pudo guardar</b>'+esc(e.message)+'</div>';
+    document.getElementById('btnGuardar').disabled=false;
+  }
+}
+
+// ---------------------------------------------------------- ficha oficial
+async function elegirFicha(i){
+  const p=window['ULTIMAF'][i];
+  const caja=document.getElementById('fichaSalida');
+  caja.innerHTML='<div class="cargando on">Abriendo…</div>';
+  try{
+    const d=await pedir({accion:'ficha',codigo:p.codigo,nombre:p.nombre});
+    let html='';
+    if(d.pre)  html+=hojaOficial(d,'pre');
+    if(d.post) html+=hojaOficial(d,'post');
+    if(d.pre&&d.post) html+=hojaComparativa(d);
+    html+=bloqueFechas(d)
+      +'<div class="acciones-ficha no-imprimir">'
+      +'<button class="btn btn-tinta" onclick="imprimirHojas(\'fichaSalida\')">Imprimir</button>'
+      +'<button class="btn btn-enviar" onclick="pdfADrive()">Guardar en Drive</button>'
+      +'</div><div id="pdfSalida" class="no-imprimir"></div>';
+    window.FICHA=d;
+    caja.innerHTML=html;
+    caja.scrollIntoView({behavior:'smooth',block:'start'});
+  }catch(e){
+    caja.innerHTML='<div class="aviso error"><b>Sin ficha</b>'+esc(e.message)+'</div>';
+  }
+}
+
+function bandaLogos(){
+  return '<div class="logos">'+LOGOS.map((l,i)=> l
+    ? '<img src="'+esc(l)+'" alt="'+esc(LOGOS_ALT[i])+'">'
+    : '<div class="logo-vacio">'+esc(LOGOS_ALT[i])+'</div>').join('')+'</div>';
+}
+
+function hojaOficial(d,momento){
+  const r=d[momento];
+  const hayMetrico = r.metrico!=='' && r.metrico!==undefined && r.metrico!==null;
+  const filas=d.items.map((t,i)=>
+    '<tr><td>'+(i+1)+'. '+esc(t)+'</td>'
+    + d.niveles.map((n,j)=>'<td class="c">'+cb(r.respuestas[i]===j+1)+'</td>').join('')
+    + '</tr>').join('');
+
+  return '<div class="hoja">'
+  + bandaLogos()
+  + '<h2>ESCALA WARWICK-EDINBURGH DE BIENESTAR MENTAL — VERSIÓN CORTA (SWEMWBS)</h2>'
+  + '<p class="sub1">Formulario de aplicación — Atención psicológica (Pre-test / Post-test)</p>'
+  + '<p class="sub2">'+esc(d.institucion)+' — Protección local y asistencia humanitaria</p>'
+
+  + '<table class="of"><tbody>'
+  +  '<tr><td class="et">Nombre y apellido:</td><td>'+esc(d.nombre)+'</td>'
+  +      '<td class="et">Código ID:</td><td style="font-family:var(--mono);font-size:9px">'+esc(d.codigo)+'</td></tr>'
+  +  (d.cedula
+      ? '<tr><td class="et">Documento de identidad:</td><td>'+esc(d.cedula)+'</td>'
+        +'<td class="et">Modalidad:</td><td>'+(d.grupal?'Terapia grupal':'Terapia individual')+'</td></tr>'
+      : '')
+  +  '<tr><td class="et">Fecha de aplicación:</td><td>'+esc(r.fecha)+'</td>'
+  +      '<td class="et">Momento:</td><td>'+cb(momento==='pre')+' Pre-test &nbsp; '
+  +        cb(momento==='post')+' Post-test</td></tr>'
+  +  '<tr><td class="et">Edad:</td><td>'+esc(d.edad)+'</td>'
+  +      '<td class="et">Género:</td><td>'
+  +        cb(esMujer(d.genero))+' Femenino &nbsp; '+cb(esHombre(d.genero))+' Masculino<br>'
+  +        cb(!!d.genero && !esMujer(d.genero) && !esHombre(d.genero))+' Otro</td></tr>'
+  +  '<tr><td class="et">¿Víctima de VBG?:</td><td>'+cb(esSi(d.vbg))+' Sí &nbsp; '
+  +        cb(esNo(d.vbg))+' No</td>'
+  +      '<td class="et">¿Discapacidad?:</td><td>'+cb(esSi(d.discapacidad))+' Sí &nbsp; '
+  +        cb(esNo(d.discapacidad))+' No</td></tr>'
+  + '</tbody></table>'
+
+  + '<h3>INSTRUCCIONES</h3><p>'+esc(d.consigna)+'</p>'
+  + '<p style="font-size:8.5pt;font-style:italic;color:#555;margin-top:3px">'
+  + 'Marque una sola casilla por fila. Puede usar una X, una palomita, rellenarla '
+  + 'o poner un punto: cualquier marca clara sirve.</p>'
+
+  + '<table class="of" style="margin-top:10px"><thead><tr>'
+  +   '<th class="izq">'+esc(d.encabezado_tabla)+'</th>'
+  +   d.niveles.map((n,i)=>'<th>'+esc(n)+'<br>('+(i+1)+')</th>').join('')
+  + '</tr></thead><tbody>'+filas+'</tbody></table>'
+
+  + '<h3>PUNTAJE (uso exclusivo del/la aplicador/a)</h3>'
+  + '<table class="of puntaje"><tbody>'
+  +  '<tr><td class="et">Suma de las 7 respuestas (puntaje bruto):</td>'
+  +      '<td style="text-align:center;font-weight:700;font-size:14px">'+r.bruto+'</td></tr>'
+  +  (hayMetrico
+      ? '<tr><td class="et">Puntaje métrico:</td>'
+        +'<td style="text-align:center;font-weight:700">'+r.metrico+'</td></tr>'
+      : '')
+  +  '<tr><td class="et" colspan="2" style="font-weight:400;background:#fff">'
+  +      esc(d.nota_rango)+'</td></tr>'
+  + '</tbody></table>'
+
+  + '<p style="margin-top:12px"><b>Observaciones:</b></p>'
+  + '<div class="obs">'+esc(r.observaciones||'')+'</div>'
+
+  + bloqueFirmas(d.aplicador)
+  + '</div>';
+}
+
+/**
+ * Dos espacios de firma. Si la profesional tiene su firma cargada, se dibuja
+ * encima de la línea; si no, queda el espacio en blanco para firmar a mano.
+ */
+/**
+ * Quién aplicó la escala. Sin espacio de firma: solo el nombre, porque la
+ * hoja se archiva junto al consentimiento y no hace falta firmarla aparte.
+ */
+function bloqueFirmas(aplicador){
+  return '<div class="firmas">'
+    + '<div class="firma-bloque"><div class="firma-linea"></div>'
+    +   '<div class="firma-rot"><b>'+esc(aplicador||'')+'</b>Nombre del/la aplicador/a</div></div>'
+    + '</div>';
+}
+
+function hojaComparativa(d){
+  const c=d.cambio, signo=c>0?'+':'';
+  const cl=c>0?'sube':(c<0?'baja':'igual');
+  const filas=d.items.map((t,i)=>
+    '<tr><td>'+(i+1)+'. '+esc(t)+'</td>'
+    +'<td class="c">'+d.pre.respuestas[i]+'</td>'
+    +'<td class="c">'+d.post.respuestas[i]+'</td>'
+    +'<td class="c">'+(d.post.respuestas[i]-d.pre.respuestas[i]>0?'+':'')
+    +(d.post.respuestas[i]-d.pre.respuestas[i])+'</td></tr>').join('');
+
+  return '<div class="hoja">'
+  + bandaLogos()
+  + '<h2>COMPARACIÓN PRE-TEST / POST-TEST</h2>'
+  + '<p class="sub2">'+esc(d.institucion)+' — Escala Warwick-Edinburgh (SWEMWBS)</p>'
+  + '<table class="of"><tbody>'
+  +  '<tr><td class="et">Nombre y apellido:</td><td>'+esc(d.nombre)+'</td></tr>'
+  +  '<tr><td class="et">Código ID:</td><td style="font-family:var(--mono);font-size:9px">'+esc(d.codigo)+'</td></tr>'
+  +  '<tr><td class="et">Fechas:</td><td>Pre '+esc(d.pre.fecha)+' · Post '+esc(d.post.fecha)+'</td></tr>'
+  + '</tbody></table>'
+  + '<div class="cifras" style="grid-template-columns:repeat(4,1fr)">'
+  +  '<div class="cifra"><b>'+d.pre.bruto+'</b><span>Pre-test</span></div>'
+  +  '<div class="cifra"><b>'+d.post.bruto+'</b><span>Post-test</span></div>'
+  +  '<div class="cifra"><b>'+signo+c+'</b><span>Cambio</span></div>'
+  +  '<div class="cifra"><b>'+(d.porcentaje===''?'—':d.porcentaje+'%')+'</b>'
+  +    '<span>Mejora</span></div></div>'
+  + '<table class="of"><thead><tr><th class="izq">Afirmación</th>'
+  +   '<th>Pre</th><th>Post</th><th>Dif.</th></tr></thead><tbody>'+filas
+  +   '<tr><td style="font-weight:700">Puntaje total (7–35)</td>'
+  +     '<td class="c" style="font-weight:700">'+d.pre.bruto+'</td>'
+  +     '<td class="c" style="font-weight:700">'+d.post.bruto+'</td>'
+  +     '<td class="c" style="font-weight:700">'+signo+c+'</td></tr>'
+  + '</tbody></table>'
+  + '<div class="comparativa"><h3>INTERPRETACIÓN</h3>'
+  +   '<p><span class="pill '+cl+'">'+esc(d.tendencia)+'</span></p>'
+  +   '<p style="margin-top:8px">'+esc(d.frase)+'</p></div>'
+  + bloqueFirmas(d.aplicador)
+  + '</div>';
+}
+
+// promedio del % de mejora, solo sobre quienes tienen pre y post
+function promedio(filas){
+  const nums=filas.map(f=>parseFloat(String(f.porcentaje||'').replace('%','')))
+                  .filter(n=>!isNaN(n));
+  if(!nums.length) return '—';
+  return (Math.round(nums.reduce((a,b)=>a+b,0)/nums.length*10)/10)+'%';
+}
+
+
+// ============================================================================
+//  GRUPAL
+// ============================================================================
+let GRUPO = null, GPART = [], GMOMENTO = 'pre', GINFO = null;
+// la edad mínima la define el backend: aquí solo se guarda lo que llegue
+let EDAD_MINIMA = 14;
+
+async function gCargarGrupos(){
+  const caja=document.getElementById('gLista');
+  caja.innerHTML='<p class="sub">Cargando…</p>';
+  try{
+    const d=await pedir({accion:'grupos',localidad:LOC});
+    if(!d.grupos.length){
+      caja.innerHTML='<div class="aviso neutro"><b>Todavía no hay grupos</b>'
+        +'Aparecen aquí cuando dictas la primera sesión grupal y subes la lista de '
+        +'asistencia.</div>';
+      return;
+    }
+    caja.innerHTML='<div style="display:flex;flex-direction:column;gap:8px">'
+      + d.grupos.map((g,i)=>
+        '<button class="grupo-card" onclick="gElegir('+i+')">'
+        + '<div class="tema">'+esc(g.nombre||'Grupo sin nombre')+'</div>'
+        + '<div class="meta">'+g.participantes+' participantes · '
+        +   (g.sesiones||0)+' de 3 sesiones'
+        +   (g.sesiones>=3?' · proceso cerrado':'')+'</div>'
+        + '<div class="cod">'+esc(g.codigo)+'</div></button>').join('')
+      + '</div>';
+    window.GRUPOS=d.grupos;
+  }catch(e){
+    caja.innerHTML='<div class="aviso error"><b>No se pudo cargar</b>'+esc(e.message)+'</div>';
+  }
+}
+
+async function gElegir(i){
+  GRUPO=window.GRUPOS[i];
+  document.getElementById('gSelector').hidden=true;
+  document.getElementById('gElegido').hidden=false;
+  await gRefrescar();
+  document.getElementById('gElegido').scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+function gVolver(){
+  GRUPO=null; GPART=[]; GINFO=null;
+  document.getElementById('gSelector').hidden=false;
+  ['gElegido','gGrilla'].forEach(x=>document.getElementById(x).hidden=true);
+  document.getElementById('gSalida').innerHTML='';
+  document.getElementById('gAviso').innerHTML='';
+  document.getElementById('gImpresion').innerHTML='';
+}
+
+async function gRefrescar(){
+  const cg=document.getElementById('gCargando');
+  cg.classList.add('on'); cg.textContent='Cargando el grupo…';
+  try{
+    const d=await pedir({accion:'grilla',codigo:GRUPO.codigo,localidad:LOC});
+    GINFO=d;
+    if(d.edad_minima) EDAD_MINIMA=d.edad_minima;
+    if(d.cerrado && !GMOMENTO_TOCADO) GMOMENTO='post';
+    gPintarCabecera();
+    gPintarGrilla();
+    document.getElementById('gGrilla').hidden=false;
+    revisarSinDueno();
+  }catch(e){
+    document.getElementById('gAviso').innerHTML=
+      '<div class="aviso error"><b>Error</b>'+esc(e.message)+'</div>';
+  }
+  cg.classList.remove('on');
+}
+
+let GMOMENTO_TOCADO=false;
+function gPonerMomento(v){
+  GMOMENTO=v; GMOMENTO_TOCADO=true;
+  gPintarCabecera(); gPintarGrilla();
+}
+
+function gPintarCabecera(){
+  const d=GINFO;
+  const chip=(v,txt)=>'<button class="chip" aria-pressed="'+(GMOMENTO===v)+'" '
+    +'onclick="gPonerMomento(\''+v+'\')">'+txt+'</button>';
+  document.getElementById('gCabecera').innerHTML=
+      '<div class="tema">'+esc(d.tema||GRUPO.nombre||'Grupo')+'</div>'
+    + '<div class="meta">'+d.total+' participantes · '+d.aplicables+' de '+d.edad_minima
+    +   ' años o más · sesión '+d.sesiones+' de '+d.sesiones_para_cerrar
+    +   (d.cerrado?' · proceso cerrado':'')+'</div>'
+    + '<div class="cod">'+esc(d.codigo)+'</div>'
+    + '<div class="auto"><span class="chip-lbl">Momento</span>'
+    +   chip('pre','Pre-test')+chip('post','Post-test')+'</div>'
+    + '<button class="cambiar" onclick="gVolver()">Elegir otro grupo</button>';
+}
+
+function gPintarGrilla(){
+  const d=GINFO;
+  // estado local de las respuestas de cada participante
+  GPART = d.participantes.map(p=>{
+    const yaHay = GMOMENTO==='pre' ? p.pre : p.post;
+    return {...p, resp: yaHay ? yaHay.slice() : [null,null,null,null,null,null,null],
+            dudas:[], abierto:false};
+  });
+  gDibujarParticipantes();
+}
+
+function gDibujarParticipantes(){
+  const d=GINFO;
+  document.getElementById('gParticipantes').innerHTML = GPART.map((p,i)=>{
+    if(!p.aplica) return '<div class="pgrupo no"><div class="pgrupo-fila">'
+      +'<div class="pgrupo-cab" style="cursor:default">'
+      +'<span class="nom">'+esc(p.nombre)+'<span class="sub">'+esc(p.estado)+'</span></span>'
+      +'<span class="marca falta">—</span></div>'
+      +'<button class="pgrupo-lapiz" onclick="gRenombrar('+i+')" '
+      +'title="Corregir el nombre">✎</button></div></div>';
+
+    const n=p.resp.filter(x=>x!==null).length;
+    const total=p.resp.reduce((a,b)=>a+(b||0),0);
+    const listo=n===7;
+    return '<div class="pgrupo'+(listo?' lista':'')+'">'
+      + '<div class="pgrupo-fila">'
+      +   '<button class="pgrupo-cab" onclick="gAbrir('+i+')">'
+      +     '<span class="nom">'+esc(p.nombre)
+      +       (p.leido?'<span class="etq-leido" title="Lo que decía el papel">'
+      +          esc(p.leido)+'</span>':'')
+      +       '<span class="sub">'+(p.edad?esc(p.edad)+' años · ':'')+esc(p.estado)+'</span></span>'
+      +     '<span class="marca '+(listo?'ok':'falta')+'">'+(listo?total+'/35':n+'/7')+'</span>'
+      +   '</button>'
+      +   '<button class="pgrupo-lapiz" onclick="gRenombrar('+i+')" '
+      +     'title="Corregir el nombre">✎</button>'
+      + '</div>'
+      + '<div class="pgrupo-items" '+(p.abierto?'':'hidden')+'>'
+      +   '<div class="fecha-hoja"><label>Fecha de aplicación</label>'
+      +     '<input type="date" value="'+esc(p.fecha||'')+'" '
+      +       'onchange="gFecha('+i+',this.value)">'
+      +     (p.fecha?'':'<span class="aviso-fecha">se usará la de hoy</span>')+'</div>'
+      +   d.items.map((t,j)=>
+          '<div class="fila-item"><p><i>'+(j+1)+'</i>'+esc(t)+'</p><div class="mini">'
+          + d.niveles.map((nv,k)=>'<button type="button" aria-pressed="'+(p.resp[j]===k+1)+'" '
+              +'class="'+(p.dudas.indexOf(j+1)!==-1?'dudosa':'')+'" aria-label="'+esc(nv)+'" '
+              +'onclick="gMarcar('+i+','+j+','+(k+1)+')">'+(k+1)+'</button>').join('')
+          + '</div></div>').join('')
+      + '</div></div>';
+  }).join('');
+
+  const listos=GPART.filter(p=>p.aplica && p.resp.every(x=>x!==null)).length;
+  const conDudas=GPART.filter(p=>p.dudas.length).length;
+  document.getElementById('gResumen').innerHTML=
+      '<div><b>'+d.aplicables+'</b><span>Les toca</span></div>'
+    + '<div><b>'+listos+'</b><span>Completos</span></div>'
+    + '<div><b>'+(d.desertores||0)+'</b><span>Posibles desertores</span></div>';
+  const btn=document.getElementById('gGuardar');
+  btn.disabled = listos===0;
+  btn.textContent = listos ? 'Guardar '+listos+' de '+d.aplicables
+                           : 'Marca al menos una persona completa';
+  if(conDudas) document.getElementById('gAviso').innerHTML=
+    '<div class="aviso neutro" style="margin-top:10px"><b>Hay respuestas dudosas</b>'
+    +'Las casillas en ámbar no se pudieron leer con seguridad. Revísalas antes de guardar.</div>';
+}
+
+function gAbrir(i){ GPART[i].abierto=!GPART[i].abierto; gDibujarParticipantes(); }
+function gFecha(i,v){ GPART[i].fecha=v; GPART[i].abierto=true; gDibujarParticipantes(); }
+function gMarcar(i,j,v){
+  GPART[i].resp[j]=v;
+  GPART[i].dudas=GPART[i].dudas.filter(x=>x!==j+1);
+  GPART[i].abierto=true;
+  gDibujarParticipantes();
+}
+
+// ---------------------------------------------------------- escaneos
+async function gLeerEscaneos(input){
+  const files=[...input.files]; input.value='';
+  if(!files.length) return;
+  const cg=document.getElementById('gCargando');
+  cg.classList.add('on');
+  document.getElementById('gAviso').innerHTML='';
+
+  // los PDF largos se leen incompletos: conviene avisarlo antes
+  for(const f of files){
+    if(f.type!=='application/pdf') continue;
+    const n=await paginasPdf(f);
+    if(n>PAGINAS_POR_ENVIO){
+      document.getElementById('gAviso').innerHTML=
+        '<div class="aviso neutro"><b>'+esc(f.name)+' tiene '+n+' páginas</b>'
+        +'Los PDF largos suelen leerse incompletos: el modelo se queda en las primeras. '
+        +'Si al terminar faltan hojas, sepáralo en archivos de '+PAGINAS_POR_ENVIO
+        +' páginas y súbelos juntos: se procesan igual y salen todas.</div>';
+    }
+  }
+
+  const tandas=[];
+  for(let i=0;i<files.length;i+=POR_TANDA) tandas.push(files.slice(i,i+POR_TANDA));
+  let acumulado={hojas:[],sin_emparejar:0,incompletas:0,sin_fecha:0};
+  const fallos=[];
+
+  try{
+    for(let t=0;t<tandas.length;t++){
+      cg.textContent = tandas.length>1
+        ? 'Leyendo tanda '+(t+1)+' de '+tandas.length+'…'
+        : 'Leyendo '+files.length+' hoja(s)… puede tardar un minuto.';
+
+      const cuerpo=new URLSearchParams();
+      cuerpo.append('accion','leerEscaneos');
+      cuerpo.append('codigo',GRUPO.codigo);
+      cuerpo.append('localidad',LOC);
+      cuerpo.append('momento',GMOMENTO);
+      for(const f of tandas[t]){
+        const a = f.type==='application/pdf' ? await gLeerPdf(f) : await gComprimir(f);
+        cuerpo.append('adjunto',a.b64);
+        cuerpo.append('adjuntoMime',a.mime);
+      }
+
+      try{
+        const r=await fetch(URL_BACKEND,{method:'POST',body:cuerpo});
+        const d=await leerRespuesta(r);
+        if(!d.exito) throw new Error(d.error||'error');
+        acumulado.hojas=acumulado.hojas.concat(d.hojas);
+        acumulado.sin_emparejar+=d.sin_emparejar||0;
+        acumulado.incompletas+=d.incompletas||0;
+        acumulado.sin_fecha+=d.sin_fecha||0;
+      }catch(e){ fallos.push('tanda '+(t+1)+': '+e.message); }
+
+      if(t < tandas.length-1){
+        for(let s=Math.round(PAUSA_MS/1000); s>0; s--){
+          cg.textContent='Leídas '+acumulado.hojas.length+' de '+files.length
+            +'. Esperando '+s+'s para no saturar el servicio…';
+          await dormir(1000);
+        }
+      }
+    }
+    cg.classList.remove('on');
+    if(!acumulado.hojas.length) throw new Error(fallos.join(' · ') || 'no se pudo leer ninguna hoja');
+    acumulado.archivos = files.length;
+    gAplicarLectura(acumulado);
+    if(fallos.length) document.getElementById('gAviso').insertAdjacentHTML('afterbegin',
+      '<div class="aviso neutro"><b>'+fallos.length+' tanda(s) fallaron</b>'
+      +esc(fallos.join(' · '))+'</div>');
+  }catch(e){
+    cg.classList.remove('on');
+    document.getElementById('gAviso').innerHTML=
+      '<div class="aviso error"><b>No se pudo leer</b>'+esc(e.message)+'</div>';
+  }
+}
+
+function gAplicarLectura(d){
+  let puestas=0;
+  const huerfanas=[];
+  d.hojas.forEach(hoja=>{
+    if(!hoja.nombre){ huerfanas.push(hoja); return; }
+    const i=GPART.findIndex(p=>p.nombre===hoja.nombre);
+    if(i===-1){ huerfanas.push(hoja); return; }
+    GPART[i].resp = hoja.respuestas.map(v=> (v>=1&&v<=5)?v:null);
+    GPART[i].fecha = hoja.fecha || val('gFechaLote') || '';
+    // lo que el escáner creyó leer, para revisarlo si no coincide
+    if(hoja.leido && normalizarTxt(hoja.leido) !== normalizarTxt(GPART[i].nombre))
+      GPART[i].leido = hoja.leido;
+    GPART[i].dudas = (hoja.dudas||[]).concat(
+      hoja.respuestas.map((v,j)=>(v>=1&&v<=5)?null:j+1).filter(x=>x));
+    GPART[i].abierto = GPART[i].dudas.length>0;
+    puestas++;
+  });
+  gDibujarParticipantes();
+
+  let aviso='<div class="aviso ok"><b>'+puestas+' hoja(s) leídas</b>'
+    +'Revisa que las respuestas coincidan con el papel antes de guardar.</div>';
+  // si el grupo tiene más gente que hojas leídas, conviene avisarlo
+  const faltan = GPART.filter(p=>p.aplica).length - d.hojas.length;
+  if(d.hojas.length && faltan>0) aviso+='<div class="aviso neutro" style="margin-top:8px">'
+    +'<b>Se leyeron '+d.hojas.length+' hoja(s) y el grupo tiene '
+    +GPART.filter(p=>p.aplica).length+' participantes</b>'
+    +'Si subiste un PDF con todas juntas y solo salió una, prueba a separarlo en '
+    +'archivos de 3 o 4 páginas: los PDF largos a veces se leen incompletos. '
+    +'También puedes llenar las que falten a mano tocando el nombre.</div>';
+  if(d.incompletas) aviso+='<div class="aviso neutro" style="margin-top:8px">'
+    +'<b>'+d.incompletas+' con filas sin marca clara</b>'
+    +'Las dejé en blanco a propósito: es preferible que las completes tú a que el sistema '
+    +'adivine un puntaje.</div>';
+  if(huerfanas.length) aviso+='<div class="sin-emparejar"><b>'+huerfanas.length
+    +' hoja(s) sin dueño</b>No pude decidir de quién son. '
+    +'Los nombres que leí fueron: '+huerfanas.map(x=>esc(x.leido||'(ilegible)')).join(', ')
+    +'. Llénalas a mano tocando el nombre en la lista.</div>';
+  document.getElementById('gAviso').innerHTML=aviso;
+}
+
+function gComprimir(f){
+  return new Promise((ok,mal)=>{
+    const img=new Image();
+    img.onload=()=>{
+      const max=2200, e=Math.min(1,max/Math.max(img.width,img.height));
+      const cv=document.createElement('canvas');
+      cv.width=Math.round(img.width*e); cv.height=Math.round(img.height*e);
+      const cx=cv.getContext('2d');
+      cx.fillStyle='#fff'; cx.fillRect(0,0,cv.width,cv.height);
+      cx.drawImage(img,0,0,cv.width,cv.height);
+      URL.revokeObjectURL(img.src);
+      ok({b64:cv.toDataURL('image/jpeg',0.85).split(',')[1], mime:'image/jpeg'});
+    };
+    img.onerror=()=>mal(new Error('no se pudo leer '+f.name));
+    img.src=URL.createObjectURL(f);
+  });
+}
+function gLeerPdf(f){
+  return new Promise((ok,mal)=>{
+    if(f.size>12*1048576) return mal(new Error(f.name+' pesa más de 12 MB'));
+    const fr=new FileReader();
+    fr.onloadend=()=>ok({b64:fr.result.split(',')[1], mime:'application/pdf'});
+    fr.onerror=()=>mal(new Error('no se pudo leer '+f.name));
+    fr.readAsDataURL(f);
+  });
+}
+
+/**
+ * Cuántas páginas tiene un PDF. Sirve para avisar cuando es largo, porque los
+ * PDF de muchas páginas se leen incompletos y conviene separarlos.
+ */
+function paginasPdf(f){
+  return new Promise(ok=>{
+    const fr=new FileReader();
+    fr.onloadend=()=>{
+      try{
+        const s=new TextDecoder('latin1').decode(new Uint8Array(fr.result));
+        const m=s.match(/\/Type\s*\/Page[^s]/g);
+        ok(m ? m.length : 0);
+      }catch(e){ ok(0); }
+    };
+    fr.onerror=()=>ok(0);
+    fr.readAsArrayBuffer(f);
+  });
+}
+
+// ---------------------------------------------------------- guardar
+async function gGuardarTodo(){
+  const lote=GPART.filter(p=>p.aplica && p.resp.every(x=>x!==null))
+    .map(p=>({nombre:p.nombre, edad:p.edad, genero:p.genero, vbg:p.vbg,
+              discapacidad:p.discapacidad, fecha:p.fecha||'', respuestas:p.resp}));
+  if(!lote.length) return;
+
+  const btn=document.getElementById('gGuardar');
+  btn.disabled=true; btn.textContent='Guardando…';
+  try{
+    const d=await pedir({accion:'guardarGrupo',codigo:GRUPO.codigo,momento:GMOMENTO,
+                         localidad:LOC,profesional:PROF,fecha:val('gFechaLote')||'',
+                         respuestas:JSON.stringify(lote)});
+    let html='<div class="aviso ok"><b>'+d.guardados+' guardadas</b>'
+      +esc(d.nombres.slice(0,6).join(', '))+(d.nombres.length>6?' y otras…':'')+'</div>';
+    if(d.saltados.length) html+='<div class="aviso neutro" style="margin-top:8px">'
+      +'<b>'+d.saltados.length+' quedaron fuera</b>'+esc(d.saltados.join(' · '))+'</div>';
+    document.getElementById('gSalida').innerHTML=html;
+    GINFO=d.grilla; gPintarGrilla();
+  }catch(e){
+    document.getElementById('gSalida').innerHTML=
+      '<div class="aviso error"><b>No se pudo guardar</b>'+esc(e.message)+'</div>';
+    btn.disabled=false;
+  }
+}
+
+// ---------------------------------------------------------- hojas en blanco
+async function gImprimirBlanco(){
+  const cg=document.getElementById('gCargando');
+  cg.classList.add('on'); cg.textContent='Preparando las hojas…';
+  try{
+    const d=await pedir({accion:'hojasBlanco',codigo:GRUPO.codigo,
+                         localidad:LOC,momento:GMOMENTO});
+    cg.classList.remove('on');
+    if(!d.participantes.length){
+      document.getElementById('gAviso').innerHTML=
+        '<div class="aviso neutro"><b>Nadie para imprimir</b>'
+        +'Ningún participante de este grupo tiene '+d.edad_minima+' años o más.</div>';
+      return;
+    }
+    document.getElementById('gImpresion').innerHTML=
+      d.participantes.map(p=>gHojaBlanco(d,p)).join('');
+    if(d.excluidos) document.getElementById('gAviso').innerHTML=
+      '<div class="aviso neutro"><b>'+d.imprimibles+' hojas listas</b>'
+      +d.excluidos+' participante(s) quedaron fuera por ser menores de '+d.edad_minima
+      +' años.</div>';
+    setTimeout(()=>imprimirHojas('gImpresion'), 400);
+  }catch(e){
+    cg.classList.remove('on');
+    document.getElementById('gAviso').innerHTML=
+      '<div class="aviso error"><b>Error</b>'+esc(e.message)+'</div>';
+  }
+}
+
+function gHojaBlanco(d,p){
+  const filas=d.items.map((t,i)=>
+    '<tr><td>'+(i+1)+'. '+esc(t)+'</td>'
+    + d.niveles.map(()=>'<td class="c"><span class="casilla-blanco"></span></td>').join('')
+    + '</tr>').join('');
+  return '<div class="hoja">'
+  + bandaLogos()
+  + '<h2>ESCALA WARWICK-EDINBURGH DE BIENESTAR MENTAL — VERSIÓN CORTA (SWEMWBS)</h2>'
+  + '<p class="sub1">Formulario de aplicación — Terapia grupal ('
+  +   (d.momento==='post'?'Post-test':'Pre-test')+')</p>'
+  + '<p class="sub2">'+esc(d.institucion)+' — Protección local y asistencia humanitaria</p>'
+  + '<table class="of"><tbody>'
+  +  '<tr><td class="et">Nombre y apellido:</td><td>'+esc(p.nombre)+'</td>'
+  +      '<td class="et">Código del grupo:</td>'
+  +      '<td style="font-family:var(--mono);font-size:9px">'+esc(d.codigo)+'</td></tr>'
+  +  '<tr><td class="et">Fecha de aplicación:</td><td></td>'
+  +      '<td class="et">Momento:</td><td>'
+  +        (d.momento==='pre'?'☒':'☐')+' Pre-test &nbsp; '
+  +        (d.momento==='post'?'☒':'☐')+' Post-test</td></tr>'
+  +  '<tr><td class="et">Edad:</td><td>'+esc(p.edad)+'</td>'
+  +      '<td class="et">Género:</td><td>'+esc(p.genero||'')+'</td></tr>'
+  + '</tbody></table>'
+  + '<h3>INSTRUCCIONES</h3><p>'+esc(d.consigna)+'</p>'
+  + '<p style="font-size:8.5pt;font-style:italic;color:#555;margin-top:3px">'
+  + 'Marque una sola casilla por fila. Puede usar una X, una palomita, rellenarla '
+  + 'o poner un punto: cualquier marca clara sirve.</p>'
+  + '<table class="of" style="margin-top:10px"><thead><tr>'
+  +   '<th class="izq">'+esc(d.encabezado_tabla)+'</th>'
+  +   d.niveles.map((n,i)=>'<th>'+esc(n)+'<br>('+(i+1)+')</th>').join('')
+  + '</tr></thead><tbody>'+filas+'</tbody></table>'
+  + '<h3>PUNTAJE (uso exclusivo del/la aplicador/a)</h3>'
+  + '<table class="of puntaje"><tbody>'
+  +  '<tr><td class="et">Suma de las 7 respuestas (puntaje bruto):</td><td></td></tr>'
+  +  '<tr><td class="et" colspan="2" style="font-weight:400;background:#fff">'
+  +      esc(d.nota_rango)+'</td></tr>'
+  + '</tbody></table>'
+  + '<p style="margin-top:12px"><b>Observaciones:</b></p><div class="obs"></div>'
+  + bloqueFirmas('')
+  + '</div>';
+}
+
+
+// ============================================================================
+//  GUARDAR LA FICHA EN DRIVE
+//  El PDF lo arma el navegador, no el servidor: así sale idéntico a lo que se
+//  ve en pantalla, que es el formulario que pidió el donante. El conversor de
+//  Google Docs descuadraría la tabla.
+// ============================================================================
+
+async function pdfADrive(){
+  const d = window.FICHA;
+  if(!d) return;
+  const caja = document.getElementById('pdfSalida');
+  const hojas = [...document.querySelectorAll('#fichaSalida .hoja')];
+  if(!hojas.length){ caja.innerHTML='<div class="aviso error">No hay nada que guardar.</div>'; return; }
+
+  // una hoja, un archivo: pre, post y comparativo se guardan por separado
+  const momentos = [];
+  if(d.pre)  momentos.push('pre');
+  if(d.post) momentos.push('post');
+  if(d.pre && d.post) momentos.push('comparativo');
+
+  caja.innerHTML='<div class="aviso neutro"><b>Generando…</b>'
+    +'Esto puede tardar unos segundos por cada hoja.</div>';
+
+  const guardados=[], fallos=[];
+  for(let i=0;i<hojas.length;i++){
+    const momento = momentos[i] || 'pre';
+    try{
+      caja.innerHTML='<div class="aviso neutro"><b>Generando '+(i+1)+' de '+hojas.length+'…</b>'
+        +'No cierres la pestaña.</div>';
+      const html = hojaAHtml(hojas[i]);
+      const r = await pedir({accion:'guardarHtml', codigo:d.codigo, nombre:d.nombre,
+                             momento:momento, html:html});
+      guardados.push(r);
+    }catch(e){ fallos.push(momento+': '+e.message); }
+  }
+
+  if(guardados.length){
+    caja.innerHTML='<div class="aviso ok"><b>'+guardados.length+' archivo(s) en Drive</b>'
+      + guardados.map(g=>esc(g.archivo)
+          + (g.tamano ? ' <span style="color:var(--apagado)">('
+              + Math.round(g.tamano/1024) + ' KB)</span>' : '')).join('<br>')
+      + '<p style="margin-top:9px"><a href="'+esc(guardados[0].carpeta)+'" target="_blank" '
+      + 'rel="noopener">Abrir la carpeta del caso</a></p></div>'
+      + (fallos.length?'<div class="aviso neutro" style="margin-top:8px"><b>'+fallos.length
+         +' fallaron</b>'+esc(fallos.join(' · '))+'</div>':'');
+  }else{
+    caja.innerHTML='<div class="aviso error"><b>No se pudo guardar</b>'
+      +esc(fallos.join(' · '))+'</div>';
+  }
+}
+
+/**
+ * Convierte una hoja en PDF A4 y lo devuelve en base64.
+ *
+ * Se copia la hoja a un contenedor propio con el MISMO estilo de imprimirHojas(),
+ * para que el PDF de Drive salga idéntico al papel. Si se generara desde la
+ * pantalla directamente, arrastraría el CSS de la aplicación y quedaría distinto.
+ */
+/**
+ * Arma el HTML completo de la hoja, con sus estilos dentro, y lo devuelve en
+ * base64 para que el servidor lo convierta en PDF.
+ *
+ * La conversión ya no se hace en el navegador: se intentó tres veces con
+ * generadores del lado del cliente y el archivo siempre salía en blanco,
+ * porque capturan antes de que el navegador termine de aplicar los estilos.
+ * Google convierte el HTML directamente y no depende de eso.
+ */
+function hojaAHtml(nodo){
+  if(!nodo || !nodo.outerHTML || nodo.outerHTML.length < 200)
+    throw new Error('la hoja está vacía: ábrela primero y vuelve a intentar');
+
+  // El conversor de Google no entiende @page: se cambia por márgenes del body.
+  const estilo = estiloHoja()
+    .replace(/@page\{[^}]*\}/, '')
+    + 'body{margin:10mm 11mm;width:auto}';
+
+  const doc = '<!DOCTYPE html><html lang="es"><head><meta charset="utf-8">'
+    + '<style>' + estilo + '</style></head><body>'
+    + nodo.outerHTML + '</body></html>';
+
+  // a base64 conservando las tildes
+  return btoa(unescape(encodeURIComponent(doc)));
+}
+
+
+
+
+// ============================================================================
+//  IMPRIMIR
+//  Se abre una ventana nueva solo con las hojas y su estilo. Antes se imprimía
+//  la página entera y el navegador tenía que ignorar todo lo demás; bastaba una
+//  regla de más para que saliera en blanco. Así no hay nada que ocultar.
+// ============================================================================
+
+function estiloHoja(){
+  // Medidas ajustadas para que la ficha entre en UNA hoja A4 con holgura,
+  // incluso con nombres largos u observaciones de varias líneas.
+  return '@page{size:A4;margin:10mm 11mm}'
+  + '*{box-sizing:border-box}'
+  + 'body{font-family:Georgia,"Times New Roman",serif;font-size:9.5pt;color:#111;'
+  +   'background:#fff;margin:0;padding:0;line-height:1.32}'
+  + '.hoja{padding:0;margin:0}'
+  + '.hoja + .hoja{page-break-before:always}'
+  + '.logos{display:flex;justify-content:center;align-items:center;gap:20px;'
+  +   'margin-bottom:8px}'
+  + '.logos img{max-height:36px;max-width:30%;object-fit:contain}'
+  + 'h2{color:#1F3864;font-size:11.5pt;text-align:center;line-height:1.25;margin:0 0 3px;'
+  +   'font-weight:700;letter-spacing:.01em}'
+  + '.sub1{text-align:center;font-style:italic;font-size:9pt;margin:0 0 1px}'
+  + '.sub2{text-align:center;font-size:8.5pt;color:#555;margin:0 0 7px}'
+  + 'h3{color:#1F3864;font-size:9.5pt;font-weight:700;margin:9px 0 3px}'
+  + 'p{margin:0 0 4px}'
+  + 'table.of{width:100%;border-collapse:collapse;margin:3px 0;font-size:8.5pt}'
+  + 'table.of th,table.of td{border:1px solid #9aa5b1;padding:3px 5px;'
+  +   'vertical-align:middle;text-align:center}'
+  + 'table.of th{background:#1F3864;color:#fff;font-size:7.5pt;font-weight:600;'
+  +   'line-height:1.2;-webkit-print-color-adjust:exact;print-color-adjust:exact}'
+  + 'table.of th.izq,table.of td.izq{text-align:left}'
+  + 'table.of td.et{background:#E8EDF5;font-weight:600;text-align:left;width:26%;'
+  +   '-webkit-print-color-adjust:exact;print-color-adjust:exact}'
+  + 'table.of tbody tr:nth-child(even){background:#F2F4F7;'
+  +   '-webkit-print-color-adjust:exact;print-color-adjust:exact}'
+  + 'table.of tr{page-break-inside:avoid}'
+  + '.cb{font-size:10.5pt;line-height:1}'
+  + '.casilla-blanco{display:inline-block;width:5mm;height:5mm;border:0.4mm solid #333;'
+  +   'border-radius:0.5mm;background:#fff;vertical-align:middle;'
+  +   '-webkit-print-color-adjust:exact;print-color-adjust:exact}'
+  + '.puntaje td{font-size:9pt}'
+  + '.obs{border:1px solid #9aa5b1;min-height:30px;margin-top:3px}'
+  + '.comparativa{border:1px solid #1F3864;border-radius:4px;padding:7px 9px;margin-top:7px}'
+  + '.comparativa h3{margin-top:0}'
+  + '.pill{display:inline-block;padding:1px 9px;border:1px solid #999;border-radius:20px;'
+  +   'font-size:8.5pt;font-weight:700}'
+  + '.firmas{margin-top:22px;display:flex;gap:30px;align-items:flex-end}'
+  + '.firma-bloque{flex:0 0 58%}'
+  + '.firma-linea{border-bottom:1px solid #000;height:34px;position:relative}'
+  + '.firma-img{position:absolute;bottom:1px;left:6px;height:30px;width:auto}'
+  + '.firma-rot{font-size:7.5pt;color:#444;margin-top:3px;line-height:1.3}'
+  + '.firma-rot b{display:block;font-size:8.5pt;color:#000;font-weight:600}'
+  + '.nota-metodo{background:#F6F7F9;border-left:3px solid #1F3864;padding:5px 8px;'
+  +   'font-size:7pt;line-height:1.35;margin-top:6px;'
+  +   '-webkit-print-color-adjust:exact;print-color-adjust:exact}'
+  + '.marca{display:inline-block;width:11px;height:11px;border:1px solid #000;'
+  +   'border-radius:2px;vertical-align:-1px}'
+  + '.marca.on{background:#000;-webkit-print-color-adjust:exact;print-color-adjust:exact}';
+}
+
+/** Abre las hojas en una ventana limpia y lanza la impresión. */
+function imprimirHojas(contenedor){
+  const nodo = document.getElementById(contenedor || 'fichaSalida');
+  const hojas = nodo ? nodo.querySelectorAll('.hoja') : [];
+  if(!hojas.length){ alert('No hay ninguna hoja que imprimir todavía.'); return; }
+
+  let cuerpo = '';
+  hojas.forEach(x => { cuerpo += x.outerHTML; });
+
+  const v = window.open('', '_blank');
+  if(!v){ alert('El navegador bloqueó la ventana. Permite las ventanas emergentes de este sitio y vuelve a intentar.'); return; }
+  v.document.open();
+  v.document.write('<!DOCTYPE html><html lang="es"><head><meta charset="utf-8">'
+    + '<title>Escala Warwick · Paz y Esperanza</title>'
+    + '<style>' + estiloHoja() + '</style></head><body>' + cuerpo + '</body></html>');
+  v.document.close();
+  // esperar a que carguen los logos antes de abrir el diálogo
+  v.onload = () => { setTimeout(() => { v.focus(); v.print(); }, 350); };
+  setTimeout(() => { try{ v.focus(); v.print(); }catch(e){} }, 900);
+}
+
+
+
+// ============================================================================
+//  TODO EL GRUPO DE UNA VEZ
+//  Con diez participantes, abrir la ficha de cada uno son veinte operaciones.
+//  Esto arma las hojas de todo el grupo y permite imprimirlas o guardarlas
+//  en Drive en una sola pasada.
+// ============================================================================
+let GRUPO_HOJAS = [];
+
+async function abrirGrupoCompleto(){
+  if(!GRUPO) return;
+  const caja = document.getElementById('gSalida');
+  const cg = document.getElementById('gCargando');
+  cg.classList.add('on');
+  caja.innerHTML = '';
+  GRUPO_HOJAS = [];
+
+  try{
+    const g = await pedir({accion:'grilla', codigo:GRUPO.codigo,
+                           localidad:LOC, profesional:PROF});
+    const gente = (g.participantes||[]).filter(p => p.aplica);
+    if(!gente.length){
+      cg.classList.remove('on');
+      caja.innerHTML = '<div class="aviso neutro"><b>Nadie con Warwick aplicable</b>'
+        + 'En este grupo no hay participantes de '+(EDAD_MINIMA||14)
+        + ' años o más con mediciones.</div>';
+      return;
+    }
+
+    let html = '', conPre = 0, conPost = 0, sinNada = [];
+
+    for(let i=0;i<gente.length;i++){
+      cg.textContent = 'Armando ' + (i+1) + ' de ' + gente.length + '…';
+      try{
+        const d = await pedir({accion:'ficha', codigo:GRUPO.codigo, nombre:gente[i].nombre});
+        if(!d.pre && !d.post){ sinNada.push(gente[i].nombre); continue; }
+
+        if(d.pre){  html += hojaOficial(d,'pre');  conPre++; }
+        if(d.post){ html += hojaOficial(d,'post'); conPost++; }
+        if(d.pre && d.post) html += hojaComparativa(d);
+        GRUPO_HOJAS.push(d);
+      }catch(e){ sinNada.push(gente[i].nombre); }
+    }
+
+    cg.classList.remove('on');
+    if(!GRUPO_HOJAS.length){
+      caja.innerHTML = '<div class="aviso neutro"><b>Sin mediciones guardadas</b>'
+        + 'Todavía no hay Warwick registrado para este grupo.</div>';
+      return;
+    }
+
+    caja.innerHTML =
+        '<div class="aviso ok no-imprimir"><b>' + GRUPO_HOJAS.length + ' participante(s)</b>'
+      + conPre + ' pre-test · ' + conPost + ' post-test'
+      + (sinNada.length ? '<br>Sin medición: ' + esc(sinNada.join(', ')) : '')
+      + '</div>'
+      + '<div class="acciones-ficha no-imprimir">'
+      +   '<button class="btn btn-tinta" onclick="imprimirHojas(\'gSalida\')">'
+      +     'Imprimir todo</button>'
+      +   '<button class="btn btn-enviar" onclick="grupoADrive()">'
+      +     'Guardar todo en Drive</button>'
+      + '</div>'
+      + '<div id="grupoSalida" class="no-imprimir"></div>'
+      + html;
+    caja.scrollIntoView({behavior:'smooth', block:'start'});
+
+  }catch(e){
+    cg.classList.remove('on');
+    caja.innerHTML = '<div class="aviso error"><b>No se pudo abrir</b>'+esc(e.message)+'</div>';
+  }
+}
+
+/** Guarda en Drive las hojas de todo el grupo, una por una. */
+async function grupoADrive(){
+  const caja = document.getElementById('grupoSalida');
+  const hojas = [...document.querySelectorAll('#gSalida .hoja')];
+  if(!hojas.length) return;
+
+  // cada participante aporta pre, post y comparativa según lo que tenga
+  const plan = [];
+  GRUPO_HOJAS.forEach(d => {
+    if(d.pre)  plan.push({nombre:d.nombre, momento:'pre'});
+    if(d.post) plan.push({nombre:d.nombre, momento:'post'});
+    if(d.pre && d.post) plan.push({nombre:d.nombre, momento:'comparativo'});
+  });
+
+  let hechos = 0;
+  const fallos = [];
+  for(let i=0;i<hojas.length && i<plan.length;i++){
+    caja.innerHTML = '<div class="aviso neutro"><b>Guardando ' + (i+1)
+      + ' de ' + plan.length + '…</b>No cierres la pestaña.</div>';
+    try{
+      const html = hojaAHtml(hojas[i]);
+      await pedir({accion:'guardarHtml', codigo:GRUPO.codigo,
+                   nombre:plan[i].nombre, momento:plan[i].momento, html:html});
+      hechos++;
+    }catch(e){ fallos.push(plan[i].nombre + ' (' + plan[i].momento + ')'); }
+  }
+
+  caja.innerHTML = hechos
+    ? '<div class="aviso ok"><b>' + hechos + ' archivo(s) en Drive</b>'
+      + 'Están en la carpeta del grupo, un documento por persona y momento.'
+      + (fallos.length ? '<br><br>No se pudieron guardar: ' + esc(fallos.join(', ')) : '')
+      + '</div>'
+    : '<div class="aviso error"><b>No se guardó ninguno</b>'
+      + esc(fallos.join(', ')) + '</div>';
+}
+
+
+/** Sin tildes ni mayúsculas, para comparar nombres escritos de distinta forma. */
+function normalizarTxt(s){
+  return String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .toLowerCase().replace(/\s+/g,' ').trim();
+}
+
+
+// ============================================================================
+//  MEDICIONES SIN DUEÑO
+//  Cuando el lector transcribe mal un nombre, la medición queda a nombre de
+//  alguien que no existe y la persona real aparece sin Warwick. En grupal esto
+//  no se arregla corrigiendo la trazabilidad: ahí el nombre ES el identificador.
+// ============================================================================
+
+async function revisarSinDueno(){
+  if(!GRUPO) return;
+  const caja = document.getElementById('gSinDueno');
+  if(!caja) return;
+  try{
+    const d = await pedir({accion:'sinDueno', codigo:GRUPO.codigo, profesional:PROF});
+    if(!d.sueltas.length){ caja.innerHTML=''; return; }
+
+    caja.innerHTML =
+        '<div class="sin-dueno">'
+      + '<p class="sd-tit">' + d.sueltas.length + ' medición(es) sin dueño</p>'
+      + '<p class="sd-txt">Estas hojas se guardaron con un nombre que no está en el '
+      +   'grupo: seguramente el lector transcribió mal. Asígnalas a quien '
+      +   'corresponda.</p>'
+      + d.sueltas.map((s,i) =>
+            '<div class="sd-fila">'
+          + '<span class="sd-nom">"' + esc(s.nombre) + '"'
+          +   '<span class="sd-det">' + esc(s.momento) + ' · ' + s.puntaje + '/35'
+          +     (s.fecha ? ' · ' + esc(s.fecha) : '') + '</span></span>'
+          + '<select id="sd' + i + '">'
+          +   '<option value="">¿de quién es?</option>'
+          +   (s.parecidos.length
+              ? '<optgroup label="Se parece a">'
+                + s.parecidos.map(p => '<option>' + esc(p) + '</option>').join('')
+                + '</optgroup><optgroup label="Los demás">'
+                + d.participantes.filter(p => s.parecidos.indexOf(p) === -1)
+                    .map(p => '<option>' + esc(p) + '</option>').join('')
+                + '</optgroup>'
+              : d.participantes.map(p => '<option>' + esc(p) + '</option>').join(''))
+          + '</select>'
+          + '<button class="sd-btn" onclick="asignarSuelta(' + s.fila + ',' + i + ')">'
+          +   'Asignar</button>'
+          + '</div>').join('')
+      + '<div id="sdSalida"></div>'
+      + '</div>';
+  }catch(e){ caja.innerHTML=''; }
+}
+
+async function asignarSuelta(fila, i, reemplazar){
+  const sel = document.getElementById('sd'+i);
+  const nuevo = sel ? sel.value : '';
+  const salida = document.getElementById('sdSalida');
+  if(!nuevo){
+    salida.innerHTML = '<div class="aviso neutro">Elige de quién es.</div>';
+    return;
+  }
+  salida.innerHTML = '<div class="aviso neutro">Asignando…</div>';
+  try{
+    const d = await pedir({accion:'reasignar', profesional:PROF, codigo:GRUPO.codigo,
+      fila:fila, nuevo:nuevo, reemplazar: reemplazar ? 'si' : ''});
+    salida.innerHTML = '<div class="aviso ok"><b>Asignada</b>'
+      + 'El ' + esc(d.momento) + ' de "' + esc(d.antes) + '" ahora es de '
+      + esc(d.nuevo) + '.</div>';
+    setTimeout(gRefrescar, 900);
+  }catch(e){
+    if(/ya tiene un/.test(e.message)){
+      salida.innerHTML = '<div class="aviso neutro"><b>Ya tiene una medición</b>'
+        + esc(e.message)
+        + '<button class="btn btn-suave" onclick="asignarSuelta('+fila+','+i+',true)">'
+        + 'Reemplazar la anterior con esta</button></div>';
+    } else {
+      salida.innerHTML = '<div class="aviso error"><b>No se pudo</b>'+esc(e.message)+'</div>';
+    }
+  }
+}
+
+// ---------------------------------------------------------- corregir nombres
+/**
+ * Corrige el nombre de un participante.
+ *
+ * El lector de escaneos transcribe mal los nombres con frecuencia. Corregirlo
+ * aquí lo cambia en todas las hojas de una vez: si se hiciera en una sola, la
+ * persona quedaría partida en dos, una con el pre y otra con el post.
+ */
+function gRenombrar(i){
+  const p = GPART[i];
+  if(!p) return;
+  abrirFichaParticipante(p.nombre);
+}
+
+/**
+ * Formulario para revisar y corregir los datos de un participante.
+ *
+ * El lector de la lista de asistencia se equivoca con frecuencia con los
+ * nombres, las cédulas y las edades. Como las colegas no entran al Sheets,
+ * tienen que poder arreglarlo desde aquí.
+ */
+async function abrirFichaParticipante(nombre){
+  const caja = document.getElementById('gAviso');
+  caja.innerHTML = '<div class="aviso neutro">Cargando…</div>';
+  try{
+    const d = await pedir({accion:'verParticipante', profesional:PROF,
+                           codigo:GRUPO.codigo, nombre:nombre});
+    const sel = function(id, valor, opciones){
+      return '<select id="'+id+'">'
+        + opciones.map(o => '<option'
+            + (normalizarTxt(o)===normalizarTxt(valor)?' selected':'')
+            + '>'+esc(o)+'</option>').join('')
+        + '</select>';
+    };
+
+    caja.innerHTML =
+        '<div class="ficha-part">'
+      + '<p class="fp-tit">Revisar los datos</p>'
+      + '<p class="fp-txt">Corrige lo que el lector de la lista haya entendido mal. '
+      +   'Se guarda en todas las hojas a la vez.</p>'
+      + '<input type="hidden" id="fpFila" value="'+d.fila+'">'
+      + '<input type="hidden" id="fpActual" value="'+esc(d.nombre)+'">'
+      + '<div class="campo"><label for="fpNombre">Nombre y apellidos</label>'
+      +   '<input id="fpNombre" value="'+esc(d.nombre)+'"></div>'
+      + '<div class="rejilla">'
+      +   '<div class="campo"><label for="fpDoc">Documento</label>'
+      +     '<input id="fpDoc" inputmode="numeric" value="'+esc(d.documento)+'"></div>'
+      +   '<div class="campo"><label for="fpEdad">Edad</label>'
+      +     '<input id="fpEdad" type="number" min="0" max="120" value="'+esc(d.edad)+'"></div>'
+      + '</div>'
+      + '<div class="rejilla">'
+      +   '<div class="campo"><label for="fpGenero">Género</label>'
+      +     sel('fpGenero', d.genero, ['','MUJER','HOMBRE','LGBTIQ+']) + '</div>'
+      +   '<div class="campo"><label for="fpNac">Nacionalidad</label>'
+      +     sel('fpNac', d.nacionalidad,
+             ['','ECUATORIANA','VENEZOLANA','COLOMBIANA','OTRA']) + '</div>'
+      + '</div>'
+      + '<div class="rejilla">'
+      +   '<div class="campo"><label for="fpDisc">¿Discapacidad?</label>'
+      +     sel('fpDisc', d.discapacidad, ['','NO','SI']) + '</div>'
+      +   '<div class="campo"><label for="fpVbg">¿Víctima de VBG?</label>'
+      +     sel('fpVbg', d.vbg, ['','NO','SI']) + '</div>'
+      + '</div>'
+      + '<button class="btn btn-enviar" onclick="guardarFichaParticipante()">'
+      +   'Guardar los cambios</button>'
+      + '<button class="btn btn-suave" onclick="document.getElementById(\'gAviso\').innerHTML=\'\'">'
+      +   'Dejarlo como está</button>'
+      + '<div id="fpSalida"></div>'
+      + '</div>';
+    caja.scrollIntoView({behavior:'smooth', block:'nearest'});
+  }catch(e){
+    caja.innerHTML = '<div class="aviso error"><b>No se pudo abrir</b>'+esc(e.message)+'</div>';
+  }
+}
+
+async function guardarFichaParticipante(){
+  const salida = document.getElementById('fpSalida');
+  const nombre = val('fpNombre');
+  if(!nombre){
+    salida.innerHTML = '<div class="aviso neutro">El nombre no puede quedar vacío.</div>';
+    return;
+  }
+  salida.innerHTML = '<div class="aviso neutro">Guardando…</div>';
+  try{
+    const d = await pedir({accion:'corregirParticipante', profesional:PROF,
+      codigo:GRUPO.codigo, fila:val('fpFila'), nombre:val('fpActual'),
+      nuevoNombre:nombre, documento:val('fpDoc'), edad:val('fpEdad'),
+      genero:val('fpGenero'), nacionalidad:val('fpNac'),
+      discapacidad:val('fpDisc'), vbg:val('fpVbg')});
+
+    if(!d.cambios.length){
+      salida.innerHTML = '<div class="aviso neutro">No había nada que cambiar.</div>';
+      return;
+    }
+    salida.innerHTML = '<div class="aviso ok"><b>Guardado</b>'
+      + d.cambios.map(c=>esc(c)).join('<br>')
+      + (d.propagadas ? '<br><br>El nombre se actualizó también en las otras hojas.' : '')
+      + '</div>';
+    setTimeout(function(){
+      document.getElementById('gAviso').innerHTML='';
+      gRefrescar();
+    }, 1600);
+  }catch(e){
+    salida.innerHTML = '<div class="aviso error"><b>No se pudo</b>'+esc(e.message)+'</div>';
+  }
+}
+
+// ---------------------------------------------------------- corregir fechas
+function bloqueFechas(d){
+  const filas=[];
+  if(d.pre)  filas.push(['pre','inicial',d.pre]);
+  if(d.post) filas.push(['post','final',d.post]);
+  if(!filas.length) return '';
+  return '<div class="fechas-ficha no-imprimir">'
+    + '<p class="ff-tit">Fechas de aplicación</p>'
+    + '<p class="ff-ayuda">El sistema las lee del papel y a veces se equivoca. '
+    +   'Corrige la que esté mal.</p>'
+    + filas.map(f=>'<div class="fila-fecha">'
+        +'<span class="ff-nom">Warwick '+f[1]
+        +  ' <span class="ff-pts">'+f[2].bruto+'/35</span></span>'
+        +'<input type="date" value="'+esc(isoDe(f[2].fecha))+'" '
+        +  'onchange="corregirFechaTest(\''+f[0]+'\',this.value)">'
+        +'</div>').join('')
+    + '<div id="ffSalida"></div></div>';
+}
+
+/** Pasa una fecha en cualquier formato a AAAA-MM-DD, que es lo que pide el campo. */
+function isoDe(v){
+  if(!v) return '';
+  const s=String(v);
+  let m=s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if(m) return m[1]+'-'+m[2]+'-'+m[3];
+  m=s.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})/);   // dd/mm/aaaa
+  if(m) return m[3]+'-'+String(m[2]).padStart(2,'0')+'-'+String(m[1]).padStart(2,'0');
+  const f=new Date(s);
+  return isNaN(f.getTime()) ? '' : f.toISOString().slice(0,10);
+}
+
+async function corregirFechaTest(momento, valor){
+  const salida=document.getElementById('ffSalida');
+  const d=window.FICHA;
+  if(!d || !valor) return;
+  salida.innerHTML='<div class="aviso neutro">Guardando…</div>';
+  try{
+    const f=await pedir({accion:'fechasCaso',profesional:PROF,
+                         codigo:d.codigo,nombre:d.nombre});
+    const t=(f.tests||[]).filter(x=>x.momento===momento)[0];
+    if(!t) throw new Error('no encuentro esa medición');
+    const r=await pedir({accion:'corregirFecha',profesional:PROF,codigo:d.codigo,
+                         donde:'test',fila:t.fila,fecha:valor,quien:d.nombre});
+    salida.innerHTML='<div class="aviso ok"><b>Fecha corregida</b>'
+      +'Antes: '+esc(r.antes)+'<br>Ahora: '+esc(r.ahora)
+      +'<br>Vuelve a abrir la ficha para verla actualizada.</div>';
+  }catch(e){
+    salida.innerHTML='<div class="aviso error"><b>No se pudo</b>'+esc(e.message)+'</div>';
+  }
+}
+
+// ---------------------------------------------------------- reporte
+
+
+/** Cómo se lee el periodo del reporte, para el encabezado impreso. */
+function periodoDelReporte(d){
+  const bonito = s => {
+    const m = String(s||'').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    return m ? m[3]+'/'+m[2]+'/'+m[1] : '';
+  };
+  const a = bonito(d.desde), b = bonito(d.hasta);
+  let txt;
+  if(a && b)      txt = 'Periodo: del '+a+' al '+b;
+  else if(a)      txt = 'Periodo: desde el '+a;
+  else if(b)      txt = 'Periodo: hasta el '+b;
+  else            txt = 'Periodo: todos los registros';
+  return txt + (d.solo_completos ? ' · solo procesos completos' : '');
+}
+
+// ---------------------------------------------------------- atajos de fecha
+function ponerRango(desde, hasta){
+  const iso = f => f.toISOString().slice(0,10);
+  document.getElementById('repDesde').value = desde ? iso(desde) : '';
+  document.getElementById('repHasta').value = hasta ? iso(hasta) : '';
+}
+
+/** Un mes entero. 0 = este mes, -1 = el pasado. */
+function rangoMes(cuantos){
+  const h = new Date();
+  const ini = new Date(h.getFullYear(), h.getMonth()+cuantos, 1);
+  const fin = new Date(h.getFullYear(), h.getMonth()+cuantos+1, 0);
+  ponerRango(ini, fin > h ? h : fin);
+}
+
+/** Los últimos tres meses, que suele ser el corte de reporte. */
+function rangoTrimestre(){
+  const h = new Date();
+  ponerRango(new Date(h.getFullYear(), h.getMonth()-2, 1), h);
+}
+
+function rangoAnio(){
+  const h = new Date();
+  ponerRango(new Date(h.getFullYear(), 0, 1), h);
+}
+
+function rangoLimpiar(){ ponerRango(null, null); }
+
+async function cargarReporte(){
+  const caja=document.getElementById('reporteSalida');
+  const anon=document.getElementById('anon').checked;
+  caja.innerHTML='<div class="cargando on">Calculando…</div>';
+  try{
+    const d=await pedir({accion:'reporte',filtro:val('filtro'),localidad:LOC,
+                         desde:val('repDesde'), hasta:val('repHasta'),
+                         completos:document.getElementById('soloCompletos').checked?'si':''});
+    if(!d.filas.length){
+      caja.innerHTML='<div class="aviso neutro"><b>Sin resultados</b>'
+        + (d.solo_completos
+           ? 'No hay procesos completos en ese rango. Prueba a desmarcar '
+             + '"Solo procesos completos" para ver los que van a medias.'
+           : 'No hay tests que coincidan con ese filtro.')
+        + '</div>';
+      return;
+    }
+    const filas=d.filas.map(f=>{
+      const c=(f.cambio===''||f.cambio===null)?null:f.cambio;
+      const cl=c===null?'pend':(c>0?'sube':(c<0?'baja':'igual'));
+      return '<tr>'
+        +'<td'+(anon?' class="oculto-print"':'')+'>'+esc(f.nombre||'—')+'</td>'
+        +'<td style="font-family:var(--mono);font-size:8.5px">'+esc(f.codigo)+'</td>'
+        +'<td class="c">'+esc(f.zona||'—')+'</td>'
+        +'<td class="c">'+(f.pre===''?'—':f.pre)+'</td>'
+        +'<td class="c">'+(f.post===''?'—':f.post)+'</td>'
+        +'<td class="c">'+(c===null?'—':(c>0?'+':'')+c)+'</td>'
+        +'<td class="c">'+(f.porcentaje?esc(f.porcentaje):'—')+'</td>'
+        +'<td><span class="pill '+cl+'">'+esc(f.tendencia)+'</span></td></tr>';
+    }).join('');
+
+    caja.innerHTML='<div class="hoja">'
+      + bandaLogos()
+      + '<h2>REPORTE DE MEJORA · PRE-TEST / POST-TEST</h2>'
+      + '<p class="sub2">'+esc(d.institucion)+' — Escala Warwick-Edinburgh (SWEMWBS) · '
+      +   esc(d.localidad||'')+' · '+esc(d.profesional||'')
+      +   ' · umbral de cambio significativo: '+d.umbral+' puntos brutos</p>'
+      // el periodo que cubre: lo primero que mira quien recibe el reporte
+      + '<p class="sub1">'+esc(periodoDelReporte(d))+'</p>'
+      + '<div class="cifras" style="grid-template-columns:repeat(4,1fr)">'
+      +  '<div class="cifra"><b>'+d.total+'</b><span>Participantes</span></div>'
+      +  '<div class="cifra"><b>'+d.con_pre_y_post+'</b><span>Con pre y post</span></div>'
+      +  '<div class="cifra"><b>'+d.porcentaje_mejora+'%</b><span>Con mejora</span></div>'
+      +  '<div class="cifra"><b>'+promedio(d.filas)+'</b><span>Mejora promedio</span></div></div>'
+      + '<table class="of"><thead><tr>'
+      +   '<th'+(anon?' class="izq oculto-print"':' class="izq"')+'>Nombre</th>'
+      +   '<th class="izq">Código</th><th>Zona</th><th>Pre</th><th>Post</th>'
+      +   '<th>Cambio</th><th>% mejora</th><th>Tendencia</th></tr></thead><tbody>'
+      +   filas+'</tbody></table>'
+      + '<div class="nota-metodo">'
+      +   '<b>Cómo se calcula.</b> '+esc(d.nota_formula||'')
+      +   ' El promedio y el porcentaje de participantes con mejora se computan solo sobre '
+      +   'quienes tienen ambas mediciones registradas. El umbral de cambio relevante es de '
+      +   d.umbral+' puntos brutos.'
+      + '</div>'
+      + bloqueFirmas(d.profesional||d.institucion)+'</div>'
+      + '<button class="btn btn-tinta no-imprimir" onclick="imprimirHojas(\'reporteSalida\')">Imprimir reporte</button>';
+  }catch(e){
+    caja.innerHTML='<div class="aviso error"><b>Error</b>'+esc(e.message)+'</div>';
+  }
+}
+
+fijarProfesional();
+(function(){ const f=document.getElementById('fechaApl');
+  if(f) f.value=new Date().toISOString().slice(0,10); })();
+cargarInfo();
+hacerBusqueda('');
+</script>
+</body>
+</html>

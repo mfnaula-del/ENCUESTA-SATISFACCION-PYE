@@ -1,0 +1,1552 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1B2027">
+<title>Fichas de atención · Paz y Esperanza</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#3F4A3C">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Atención PyE">
+<link rel="apple-touch-icon" href="icono-192.png">
+<link rel="icon" type="image/png" href="icono-192.png">
+<style>
+:root{
+  --tinta:#1B2027; --papel:#E9EBE6; --carta:#FFFFFF; --oliva:#3F4A3C;
+  --senal:#C4442E; --apagado:#7A8579; --linea:#CFD4CB;
+  --mono:ui-monospace,"SF Mono","Roboto Mono","DejaVu Sans Mono",monospace;
+  --sans:ui-sans-serif,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{font-family:var(--sans);background:var(--papel);color:var(--tinta);min-height:100dvh;
+     padding:20px 16px calc(28px + env(safe-area-inset-bottom));
+     transition:background .35s ease,color .35s ease}
+body.grabando{background:var(--tinta);color:var(--papel)}
+body.grabando .carta{background:#242A32;border-color:#39414B}
+body.grabando .eyebrow,body.grabando .paso-num{color:var(--senal)}
+body.grabando label{color:#9AA6B2}
+body.grabando input,body.grabando select{background:#1B2027;color:var(--papel);border-color:#39414B}
+.envoltura{max-width:520px;margin:0 auto}
+
+.eyebrow{font-size:11px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;
+         color:var(--oliva);transition:color .35s ease}
+h1{font-size:22px;font-weight:600;letter-spacing:-.02em;margin-top:4px}
+.sub{font-size:13px;color:var(--apagado);margin-top:4px}
+
+.modo{display:flex;gap:2px;background:var(--linea);padding:2px;border-radius:10px;margin:20px 0 0}
+.modo button{flex:1;padding:10px;border:0;background:transparent;border-radius:8px;
+             font-family:inherit;font-size:14px;font-weight:600;color:var(--oliva);cursor:pointer}
+.modo button[aria-selected="true"]{background:var(--carta);color:var(--tinta);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.explica{font-size:12.5px;line-height:1.5;color:var(--apagado);margin-top:10px;padding-left:2px}
+
+.loc{margin:16px 0 0;background:var(--carta);border:1px solid var(--linea);
+  border-radius:10px;padding:11px 13px;display:flex;align-items:center;gap:11px}
+.loc label{margin:0;white-space:nowrap;font-size:10px}
+.loc.fijo{display:block;background:var(--oliva);border-color:var(--oliva);padding:13px 15px}
+.loc.fijo label{color:#9FB09C;display:block;margin-bottom:3px}
+.fijo-nombre{display:block;color:#fff;font-size:16px;font-weight:600;letter-spacing:-.01em}
+.fijo-loc{display:block;color:#C7D3C4;font-size:12.5px;margin-top:2px}
+.loc select{font-size:14px;padding:7px 8px;border:0;background:transparent;font-weight:600;
+  color:var(--oliva);width:auto;flex:1}
+.paso{margin-top:24px}
+.paso-cabeza{display:flex;align-items:baseline;gap:9px;margin-bottom:11px}
+.paso-num{font-family:var(--mono);font-size:12px;font-weight:700;color:var(--oliva);transition:color .35s}
+.paso-titulo{font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase}
+.carta{background:var(--carta);border:1px solid var(--linea);border-radius:12px;padding:16px;
+       transition:background .35s ease,border-color .35s ease}
+
+.rejilla{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.campo{display:flex;flex-direction:column;gap:5px}
+.campo.ancho{grid-column:1/-1}
+label{font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--oliva)}
+select,input{font-family:inherit;font-size:16px;padding:11px 10px;border:1px solid var(--linea);
+             border-radius:8px;background:#FBFBFA;color:inherit;width:100%}
+select:focus-visible,input:focus-visible,button:focus-visible{outline:2px solid var(--oliva);outline-offset:2px}
+
+.codigo{margin-top:14px;font-family:var(--mono);font-size:13px;line-height:1.5;word-break:break-all;
+        padding:12px;border-radius:8px;background:var(--papel);border:1px dashed var(--linea);color:var(--apagado)}
+.codigo.listo{background:var(--oliva);border-style:solid;border-color:var(--oliva);color:#fff}
+body.grabando .codigo{background:#1B2027;border-color:#39414B}
+body.grabando .codigo.listo{background:var(--oliva);color:#fff}
+
+.reloj{text-align:center;padding:6px 0 2px}
+.tiempo{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:64px;
+        font-weight:300;letter-spacing:-.03em;line-height:1}
+.tiempo.activo{color:var(--senal)}
+.presupuesto{height:3px;background:var(--linea);border-radius:2px;margin:14px 0 4px;overflow:hidden}
+.presupuesto span{display:block;height:100%;width:0;background:var(--oliva);transition:width 1s linear}
+.presupuesto span.alto{background:var(--senal)}
+.limite{font-size:11px;color:var(--apagado)}
+
+.btn{width:100%;padding:15px;border:0;border-radius:10px;font-family:inherit;font-size:15px;
+     font-weight:600;cursor:pointer;margin-top:12px;display:flex;align-items:center;
+     justify-content:center;gap:9px}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn-grabar{background:var(--tinta);color:var(--papel)}
+.btn-grabar.parar{background:var(--senal);color:#fff}
+.btn-enviar{background:var(--oliva);color:#fff}
+.btn-suave{background:transparent;color:var(--apagado);border:1px solid var(--linea);font-size:13px;padding:11px}
+.punto{width:9px;height:9px;border-radius:50%;background:currentColor}
+.parar .punto{border-radius:2px;animation:latir 1.1s ease-in-out infinite}
+@keyframes latir{50%{opacity:.25}}
+audio{width:100%;margin-top:12px}
+
+.rect-ej{background:#EDF1EC;border-radius:9px;padding:10px 12px;margin:9px 0;
+  font-size:12px;line-height:1.5;color:#2C351F}
+.rect-ej b{display:block;margin-bottom:4px;font-size:11px;letter-spacing:.05em;
+  text-transform:uppercase;color:var(--oliva)}
+.rect-ej span{display:block;margin-top:3px;font-style:italic}
+.rect-tipo{display:inline-block;padding:1px 8px;border-radius:20px;font-size:10px;
+  font-weight:700;background:var(--oliva);color:#fff;vertical-align:1px}
+.rect-caja{border-top:1px solid var(--linea);margin-top:16px;padding-top:14px}
+.rect-caja textarea{width:100%;font-family:inherit;font-size:14px;padding:10px;
+  border:1px solid var(--linea);border-radius:9px;background:#FBFBFA;resize:vertical;
+  margin-top:4px}
+.rect-reloj{text-align:center;font-family:var(--mono);font-size:26px;color:var(--senal);
+  margin:8px 0}
+.fechas-caja{border-top:1px solid var(--linea);margin-top:16px;padding-top:14px}
+.fila-fecha{display:flex;align-items:center;gap:10px;padding:7px 0;
+  border-bottom:1px solid var(--linea)}
+.fila-fecha:last-of-type{border-bottom:0}
+.ff-nom{flex:1;font-size:13.5px}
+.ff-pts{font-family:var(--mono);font-size:11px;color:var(--apagado)}
+.fila-fecha input{width:auto;font-size:13.5px;padding:6px 8px;margin:0}
+.corregir{background:#FBFBFA;border:1px solid var(--linea);border-radius:11px;
+  padding:14px;margin-top:12px}
+.corr-tit{font-size:14px;font-weight:600}
+.borrar-caja{border-top:1px solid var(--linea);margin-top:16px;padding-top:14px}
+.borrar-caja.bloqueado{opacity:.7}
+.btn-borrar{background:var(--senal);color:#fff;margin-top:9px}
+.casos{display:flex;flex-direction:column;gap:8px;margin-top:11px}
+.caso{background:#FBFBFA;border:1px solid var(--linea);border-radius:10px;padding:11px 13px;
+  text-align:left;font-family:inherit;color:inherit;cursor:pointer;display:block;width:100%;
+  position:relative}
+.caso:hover{border-color:var(--oliva)}
+.caso-nom{display:block;font-size:14.5px;font-weight:600;padding-right:70px}
+.caso-det{display:block;font-size:11.5px;color:var(--apagado);margin-top:2px}
+.caso-cod{display:block;font-family:var(--mono);font-size:9.5px;color:var(--apagado);
+  margin-top:4px;word-break:break-all;padding-right:70px}
+.caso-sig{position:absolute;top:11px;right:12px;font-size:10px;font-weight:700;
+  background:var(--oliva);color:#fff;padding:2px 8px;border-radius:20px}
+.etq-aprox{display:inline-block;margin-left:6px;padding:1px 7px;border-radius:20px;
+  font-size:9.5px;font-weight:700;background:#EDEFF2;color:#5A6570;vertical-align:1px}
+
+.elegido{background:var(--oliva);color:#fff;border-radius:11px;padding:13px 15px}
+.el-nom{display:block;font-size:16px;font-weight:600}
+.el-det{display:block;font-size:12px;color:#C7D3C4;margin-top:3px}
+.el-cod{display:block;font-family:var(--mono);font-size:10px;color:#9FB09C;margin-top:6px;
+  word-break:break-all}
+.el-cambiar{background:none;border:0;color:#fff;opacity:.75;font-family:inherit;font-size:12px;
+  text-decoration:underline;cursor:pointer;margin-top:10px;padding:0}
+
+.tras-envio{margin-top:16px;padding-top:14px;border-top:1px solid var(--linea)}
+.aviso-coherencia{background:#FDF3E3;border-left:3px solid var(--ambar);border-radius:9px;
+  padding:12px 13px;margin-top:11px;font-size:13px;line-height:1.5;color:#5C4210}
+.aviso-coherencia b{display:block;margin-bottom:6px}
+.aviso-coherencia span{display:block;margin-top:5px;padding-left:11px;position:relative}
+.aviso-coherencia span:before{content:"·";position:absolute;left:2px}
+.aviso-coherencia p{margin-top:8px;font-size:12px;opacity:.85}
+.recordatorio{background:#EDF1EC;border-left:3px solid var(--oliva);border-radius:9px;
+  padding:12px 13px;margin-top:11px;font-size:13px;line-height:1.5;color:#2C351F}
+.recordatorio b{display:block;margin-bottom:5px}
+.recordatorio span{display:block;margin-top:4px}
+.num-ok{color:var(--apagado)}
+.num-mal{color:var(--senal);font-weight:600;line-height:1.6}
+.num-hueco{color:var(--apagado);line-height:1.9}
+#estadoNum{line-height:1.6}
+.btn-mini{background:var(--oliva);color:#fff;border:0;border-radius:6px;padding:3px 9px;
+  font-family:inherit;font-size:11px;font-weight:600;cursor:pointer;margin-left:3px}
+.btn-mini + .btn-mini{background:transparent;color:var(--oliva);border:1px solid var(--linea)}
+.adjuntos{display:flex;flex-direction:column;gap:7px;margin-top:11px}
+.adj{display:flex;align-items:center;gap:10px;background:#FBFBFA;border:1px solid var(--linea);
+  border-radius:9px;padding:10px 12px}
+body.grabando .adj{background:#1B2027;border-color:#39414B}
+.adj .ico{font-family:var(--mono);font-size:10px;font-weight:700;color:var(--oliva);
+  background:var(--papel);padding:3px 6px;border-radius:4px}
+body.grabando .adj .ico{background:#2A313A}
+.adj .txt{flex:1;min-width:0}
+.adj .nom{font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.adj .peso{font-size:11px;color:var(--apagado);margin-top:1px}
+.adj .quitar{background:none;border:0;color:var(--apagado);font-size:18px;cursor:pointer;
+  padding:0 4px;line-height:1}
+.adj .quitar:hover{color:var(--senal)}
+.subir{display:block;text-align:center;border:1px dashed var(--linea);border-radius:10px;
+  padding:15px;font-size:13.5px;color:var(--oliva);cursor:pointer;background:#FBFBFA}
+.subir:hover{border-color:var(--oliva)}
+body.grabando .subir{background:#1B2027;border-color:#39414B;color:#9AA6B2}
+.subir input{display:none}
+.aviso{padding:13px;border-radius:9px;font-size:13.5px;line-height:1.5;margin-top:12px;border-left:3px solid}
+.aviso.error{background:#FBEBE8;border-color:var(--senal);color:#7B241A}
+.aviso.ok{background:#EDF1EC;border-color:var(--oliva);color:#2C351F}
+.aviso.neutro{background:#EEF0F3;border-color:var(--apagado);color:#3A424C}
+.aviso b{display:block;margin-bottom:3px}
+.resultado dl{display:grid;grid-template-columns:auto 1fr;gap:6px 12px;font-size:13.5px;margin-top:10px}
+.resultado dt{font-weight:700;color:var(--oliva)}
+.resultado a{color:var(--oliva)}
+
+.cargando{display:none;text-align:center;padding:22px;font-size:13px;color:var(--apagado)}
+.cargando.on{display:block}
+.barra{height:2px;background:var(--linea);border-radius:2px;overflow:hidden;margin-bottom:12px}
+.barra i{display:block;height:100%;width:35%;background:var(--oliva);animation:correr 1.3s ease-in-out infinite}
+@keyframes correr{0%{transform:translateX(-100%)}100%{transform:translateX(385%)}}
+.pie{margin-top:28px;font-size:11.5px;color:var(--apagado);line-height:1.6;text-align:center}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="envoltura">
+
+  <p style="margin-bottom:14px"><a href="index.html" style="color:#7A8579;text-decoration:none;font-size:12.5px">&larr; Inicio</a></p>
+  <p class="eyebrow">Paz y Esperanza · Ecuador</p>
+  <h1>Fichas de atención</h1>
+  <p class="sub">Dicta la sesión o adjunta tus notas. El sistema redacta el documento.</p>
+
+<div class="loc" id="cajaLoc">
+    <label for="profesional">Profesional</label>
+    <select id="profesional" onchange="cambiarProfesional()">
+      <option value="MN">Milton Naula — Manabí</option>
+      <option value="FC">Fernando Cedeño — Manabí</option>
+      <option value="PV">Paola Vallejo — Guayaquil</option>
+      <option value="PO">Paulina Ortega — Guayaquil</option>
+      <option value="MS">Mariana Solís — Milagro</option>
+      <option value="NR">Narcisa Rubio — Milagro</option>
+    </select>
+  </div>
+
+  <div class="modo" role="tablist">
+    <button role="tab" aria-selected="true"  onclick="ponerModo('TI',this)">Individual</button>
+    <button role="tab" aria-selected="false" onclick="ponerModo('TG',this)">Grupal</button>
+  </div>
+  <p class="explica" id="explica"></p>
+
+  <div class="modo" role="tablist" style="margin-top:14px">
+    <button role="tab" aria-selected="false" onclick="ponerEntrada('nuevo',this)">Caso nuevo</button>
+    <button role="tab" aria-selected="true"  onclick="ponerEntrada('seguir',this)">Continuar</button>
+  </div>
+
+  <!-- ══ CONTINUAR: se busca a la persona y el código viene solo ══ -->
+  <section class="paso" id="secSeguir">
+    <div class="paso-cabeza"><span class="paso-num">01</span><span class="paso-titulo">Buscar</span></div>
+    <div class="carta">
+      <input id="buscaCaso" placeholder="Escribe el nombre de la persona"
+             autocomplete="off" oninput="buscarCasoDebounce()">
+      <p class="ayuda" style="font-size:11.5px;color:var(--apagado);margin-top:7px;line-height:1.45">
+        Aguanta errores de tipeo. Elige a la persona y el código se completa solo:
+        así no hay que reescribirlo ni hay riesgo de duplicar el caso.</p>
+      <div id="listaCasos"></div>
+    </div>
+  </section>
+
+  <section class="paso" id="secElegido" hidden>
+    <div class="paso-cabeza"><span class="paso-num">02</span><span class="paso-titulo">Sesión</span></div>
+    <div class="carta">
+      <div id="cajaElegido"></div>
+    </div>
+  </section>
+
+  <!-- ══ CASO NUEVO ══ -->
+  <section class="paso" id="secNuevo" hidden>
+    <div class="paso-cabeza"><span class="paso-num">01</span><span class="paso-titulo">Identificar</span></div>
+    <div class="carta">
+      <div class="rejilla">
+        <div class="campo ancho" id="cajaCanton" hidden>
+          <label for="canton">Cantón</label>
+          <select id="canton" onchange="pintarCodigo()"></select>
+        </div>
+        <div class="campo ancho">
+          <label for="lugar">Lugar de intervención</label>
+          <input id="lugar" list="lugares" placeholder="Escribe la comunidad o barrio"
+                 autocomplete="off" oninput="lugarDebounce()">
+          <datalist id="lugares"></datalist>
+          <p class="limite" id="estadoLugar"></p>
+        </div>
+        <div class="campo">
+          <label for="num" id="lblNum">N° de paciente</label>
+          <input id="num" type="number" inputmode="numeric" min="1" placeholder="1" oninput="revisarNumero()">
+        </div>
+        <div class="campo ancho" id="cajaEstadoNum">
+          <p class="limite" id="estadoNum"></p>
+        </div>
+        <div class="campo">
+          <label for="sesion">N° de sesión</label>
+          <input id="sesion" type="number" inputmode="numeric" min="1" value="1">
+        </div>
+      </div>
+      <div class="codigo" id="codigo">Completa los campos para generar el código</div>
+    </div>
+  </section>
+
+  <section class="paso">
+    <div class="paso-cabeza"><span class="paso-num">02</span><span class="paso-titulo">Cuándo fue</span></div>
+    <div class="carta">
+      <div class="campo">
+        <label for="fechaSesion">Fecha de la sesión</label>
+        <input id="fechaSesion" type="date">
+      </div>
+      <p class="limite">Si la sesión fue hace días, pon la fecha real. Es la que va al
+        expediente y al reporte, no la de hoy.</p>
+    </div>
+  </section>
+
+  <section class="paso">
+    <div class="paso-cabeza"><span class="paso-num">03</span><span class="paso-titulo">Grabar</span></div>
+    <div class="carta">
+      <div class="reloj">
+        <div class="tiempo" id="tiempo">00:00</div>
+        <div class="presupuesto"><span id="presupuesto"></span></div>
+        <p class="limite">Límite 6:00 · opcional si adjuntas tus notas escritas</p>
+      </div>
+      <button class="btn btn-grabar" id="btnGrabar" onclick="alternar()">
+        <span class="punto"></span><span id="txtGrabar">Grabar sesión</span>
+      </button>
+      <div id="cajaAudio" hidden>
+        <audio id="reproductor" controls></audio>
+        <button class="btn btn-suave" onclick="descartar()">Descartar y volver a grabar</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="paso">
+    <div class="paso-cabeza"><span class="paso-num">04</span><span class="paso-titulo">Adjuntar</span></div>
+    <div class="carta">
+      <p class="limite" id="ayudaAdj" style="margin-bottom:11px"></p>
+      <label class="subir">
+        Elegir fotos, escaneos o PDF
+        <input type="file" id="archivos" accept="image/*,application/pdf" multiple onchange="agregarArchivos(this)">
+      </label>
+      <label class="subir" style="margin-top:8px">
+        Tomar una foto ahora
+        <input type="file" accept="image/*" capture="environment" onchange="agregarArchivos(this)">
+      </label>
+      <div class="adjuntos" id="listaAdj"></div>
+    </div>
+  </section>
+
+  <section class="paso">
+    <div class="paso-cabeza"><span class="paso-num">05</span><span class="paso-titulo">Enviar</span></div>
+    <div class="carta">
+      <button class="btn btn-enviar" id="btnEnviar" onclick="enviar()" disabled>Enviar y generar documento</button>
+      <div class="cargando" id="cargando">
+        <div class="barra"><i></i></div>
+        Gemini está escuchando la sesión y redactando. Puede tardar un minuto.
+      </div>
+      <div id="salida"></div>
+      <button class="btn btn-suave" onclick="probarConexion()">Probar conexión con el servidor</button>
+    </div>
+  </section>
+
+  <p class="pie">Documento confidencial · Estándares Esfera e IASC<br>Milton Fernando Naula Chimbo</p>
+</div>
+
+<script>
+// ===========================================================================
+//  Pega aquí la URL /exec de tu Apps Script
+// ===========================================================================
+const URL_BACKEND = 'https://script.google.com/macros/s/AKfycbznImdt0wZkkJHl_xu5bWxjdhZAOS3Gyqbw1L086yO4MkGIDizfUBq4SfhdeJm0X1Lh/exec';
+
+
+// ---------------------------------------------------------- profesional
+// Quién está usando el sistema. Viaja en el enlace (?prof=PV) para que cada
+// una guarde su acceso ya fijado. De aquí sale su localidad, su agenda y la
+// firma de sus documentos.
+const PROFESIONALES = {
+  MN:{nombre:'Milton Naula',   loc:'MB', localidad:'Manabí'},
+  FC:{nombre:'Fernando Cedeño',loc:'MB', localidad:'Manabí'},
+  PV:{nombre:'Paola Vallejo',  loc:'G',  localidad:'Guayaquil'},
+  PO:{nombre:'Paulina Ortega', loc:'G',  localidad:'Guayaquil'},
+  MS:{nombre:'Mariana Solís',  loc:'M',  localidad:'Milagro'},
+  NR:{nombre:'Narcisa Rubio',  loc:'M',  localidad:'Milagro'}
+};
+function profesionalActual(){
+  const u=new URLSearchParams(location.search).get('prof');
+  if(PROFESIONALES[u]){ recordarProfesional(u); return u; }
+
+  // Al instalar la app como icono, se abre sin ?prof= y todas caerían en el
+  // profesional por defecto. Por eso se recuerda quién la instaló.
+  const guardado = leerProfesionalGuardado();
+  if(guardado) return guardado;
+
+  // compatibilidad con los enlaces viejos que llevaban ?loc=
+  const l=new URLSearchParams(location.search).get('loc');
+  const porLoc={MB:'MN',G:'PV',M:'MS'};
+  return porLoc[l] || 'MN';
+}
+
+/** Guarda quién es, para que el icono de la app abra con su nombre. */
+function recordarProfesional(p){
+  try{ localStorage.setItem('pye_prof', p); }catch(e){}
+}
+function leerProfesionalGuardado(){
+  try{
+    const v = localStorage.getItem('pye_prof');
+    return (v && PROFESIONALES[v]) ? v : null;
+  }catch(e){ return null; }
+}
+function cambiarProfesional(){
+  if(typeof ADMIN!=='undefined' && !ADMIN) return;
+  const v=document.getElementById('profesional').value;
+  const u=new URL(location.href);
+  u.searchParams.set('prof',v);
+  u.searchParams.delete('loc');
+  if(ADMIN) u.searchParams.set('admin','1');
+  location.replace(u.toString());
+}
+const PROF = profesionalActual();
+const LOC  = PROFESIONALES[PROF].loc;
+
+// El selector solo aparece con ?admin=1, que es el enlace del responsable del
+// sistema. Cada profesional entra con su enlace fijo y no puede cambiarse a
+// otra persona ni por descuido ni a propósito.
+const ADMIN = new URLSearchParams(location.search).get('admin')==='1';
+
+function fijarProfesional(){
+  const caja=document.getElementById('cajaLoc');
+  if(!caja) return;
+  const q=PROFESIONALES[PROF];
+  if(ADMIN){
+    const sel=document.getElementById('profesional');
+    if(sel) sel.value=PROF;
+    return;
+  }
+  caja.classList.add('fijo');
+  caja.innerHTML='<label>Profesional</label>'
+    +'<span class="fijo-nombre">'+q.nombre+'</span>'
+    +'<span class="fijo-loc">'+q.localidad+'</span>';
+}
+
+
+const MAX_SEG=360, HZ=16000;
+
+// Los cantones solo se usan en Manabí: en Guayaquil y Milagro la ciudad ya es el cantón.
+const CANTONES_MB = [['MT','Manta'],['PT','Portoviejo'],['J','Jaramijó'],['MC','Montecristi']];
+
+const TEXTOS={
+  TI:'Genera la Ficha Integrada de Atención de Salud Mental. Si la persona tiene 17 años '
+    +'o más, después queda habilitada para la escala Warwick.',
+  TG:'Genera el Informe de Terapias Grupales. El código es del grupo, pero a cada '
+    +'participante mayor de 17 años sí se le aplica la escala Warwick.'
+};
+
+const AYUDA_ADJ={
+  TI:'Opcional. Puedes adjuntar fotos de tus notas de sesión, escaneos o PDF. '
+    +'Si no dictas nada, el sistema arma la ficha leyendo solo estas notas.',
+  TG:'La lista de asistencia es obligatoria en la primera sesión. Puedes adjuntar '
+    +'también fotos de tus notas o documentos escaneados.'
+};
+
+let modo='TI', wavBlob=null;
+let LUGAR=null;               // {sigla, nombre} una vez resuelto
+let temporizadorLugar=null;
+let ctx,fuente,proc,pista,trozos=[],hzOrigen=48000,grabando=false,t0,cronometro;
+
+const val=id=>document.getElementById(id).value.trim();
+const esc=t=>String(t==null?'':t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+function ponerModo(m,btn){
+  modo=m;
+  document.querySelectorAll('.modo button').forEach(b=>b.setAttribute('aria-selected','false'));
+  btn.setAttribute('aria-selected','true');
+  document.getElementById('lblNum').textContent=(m==='TG')?'N° de grupo':'N° de paciente';
+  document.getElementById('explica').textContent=TEXTOS[m];
+  document.getElementById('ayudaAdj').textContent=AYUDA_ADJ[m];
+  document.getElementById('num').value='';
+  ESTADO_NUM=null;
+  CASO=null;
+  document.getElementById('secElegido').hidden=true;
+  if(ENTRADA==='seguir') buscarCasos(); else sugerirNumero();
+  pintarCodigo();
+}
+
+
+// ============================================================================
+//  CONTINUAR UN CASO
+//  A partir de la segunda sesión no hace falta reescribir el código: se busca
+//  a la persona y el sistema trae el suyo. Reescribirlo cada vez era donde se
+//  cometían los errores de tipeo que creaban casos duplicados.
+// ============================================================================
+let ENTRADA = 'seguir';      // 'seguir' o 'nuevo'
+let CASO = null;             // el caso elegido
+let tCaso = null;
+
+function ponerEntrada(v, btn){
+  ENTRADA = v;
+  document.querySelectorAll('.modo[role=tablist]')[1]
+    .querySelectorAll('button').forEach(b=>b.setAttribute('aria-selected','false'));
+  btn.setAttribute('aria-selected','true');
+
+  document.getElementById('secSeguir').hidden = v!=='seguir';
+  document.getElementById('secNuevo').hidden  = v!=='nuevo';
+  document.getElementById('secElegido').hidden = !(v==='seguir' && CASO);
+
+  if(v==='nuevo'){ CASO=null; sugerirNumero(); }
+  else if(!document.getElementById('listaCasos').innerHTML) buscarCasos();
+  pintarCodigo();
+}
+
+function buscarCasoDebounce(){
+  clearTimeout(tCaso);
+  tCaso = setTimeout(buscarCasos, 350);
+}
+
+async function buscarCasos(){
+  const caja = document.getElementById('listaCasos');
+  caja.innerHTML = '<p class="limite">Buscando…</p>';
+  try{
+    const d = await pedir({accion:'casosAbiertos', localidad:LOC,
+                           profesional:PROF, texto:val('buscaCaso'), tipo:modo});
+    if(!d.casos.length){
+      caja.innerHTML = '<div class="aviso neutro"><b>Sin resultados</b>'
+        + (val('buscaCaso')
+           ? 'No encuentro a nadie con ese nombre en '+esc(d.localidad)+'. '
+             +'Si es la primera sesión, usa <b>Caso nuevo</b>.'
+           : 'Todavía no hay casos registrados en '+esc(d.localidad)+'.')
+        + '</div>';
+      return;
+    }
+    const aviso = d.hubo_aproximados
+      ? '<p class="limite" style="margin-bottom:8px">No hay coincidencia exacta. '
+        +'Estos son los más parecidos.</p>' : '';
+    caja.innerHTML = aviso + '<div class="casos">' + d.casos.map((c,i)=>
+      '<button class="caso" onclick="elegirCaso('+i+')">'
+      + '<span class="caso-nom">'+esc(c.nombre)
+      +   (c.aproximado?'<span class="etq-aprox">parecido</span>':'')+'</span>'
+      + '<span class="caso-det">'+esc(c.lugar_nombre)
+      +   (c.edad?' · '+esc(c.edad)+' años':'')
+      +   ' · '+c.sesiones+(c.sesiones===1?' sesión':' sesiones')
+      +   (c.ultima_txt?' · última '+esc(c.ultima_txt):'')+'</span>'
+      + '<span class="caso-cod">'+esc(c.codigo)+'</span>'
+      + '<span class="caso-sig">sesión '+c.siguiente+'</span>'
+      + '</button>').join('') + '</div>';
+    window.CASOS = d.casos;
+  }catch(e){
+    caja.innerHTML = '<div class="aviso error"><b>No se pudo buscar</b>'+esc(e.message)+'</div>';
+  }
+}
+
+function elegirCaso(i){
+  CASO = window.CASOS[i];
+  document.getElementById('cajaElegido').innerHTML =
+      '<div class="elegido">'
+    + '<span class="el-nom">'+esc(CASO.nombre)+'</span>'
+    + '<span class="el-det">'+esc(CASO.lugar_nombre)
+    +   ' · lleva '+CASO.sesiones+(CASO.sesiones===1?' sesión':' sesiones')+'</span>'
+    + '<span class="el-cod">'+esc(CASO.codigo)+'</span>'
+    + '<button class="el-cambiar" onclick="soltarCaso()">Elegir a otra persona</button>'
+    + '<button class="el-cambiar" style="margin-left:16px" onclick="abrirCorregir()">'
+    +   'Corregir datos</button>'
+    + '</div>'
+    + '<div id="cajaCorregir"></div>'
+    + '<div class="campo" style="margin-top:12px">'
+    +   '<label for="sesionSeguir">N° de sesión</label>'
+    +   '<input id="sesionSeguir" type="number" min="1" value="'+CASO.siguiente+'" '
+    +     'oninput="revisarEnvio()">'
+    +   '<p class="limite">Va la '+CASO.siguiente+'. Cámbialo solo si estás '
+    +     'registrando una sesión anterior que quedó pendiente.</p>'
+    + '</div>';
+  document.getElementById('secElegido').hidden = false;
+  document.getElementById('secElegido').scrollIntoView({behavior:'smooth',block:'nearest'});
+  pintarCodigo();
+}
+
+function soltarCaso(){
+  CASO = null;
+  document.getElementById('secElegido').hidden = true;
+  document.getElementById('cajaElegido').innerHTML = '';
+  pintarCodigo();
+}
+
+/** El número de sesión, venga de donde venga. */
+function sesionActual(){
+  if(ENTRADA==='seguir' && CASO) return val('sesionSeguir') || String(CASO.siguiente);
+  return val('sesion') || '1';
+}
+
+
+// ============================================================================
+//  CORREGIR Y BORRAR
+//  Las profesionales no tienen acceso al Sheets, así que necesitan poder
+//  arreglar sus propios errores. Corregir un dato es cotidiano; borrar un caso
+//  solo se permite si está vacío, porque un borrado no se deshace.
+// ============================================================================
+const CAMPOS = [
+  ['nombre',       'Nombre y apellidos'],
+  ['edad',         'Edad'],
+  ['cedula',       'Documento de identidad'],
+  ['genero',       'Género'],
+  ['vbg',          '¿Víctima de VBG?'],
+  ['discapacidad', '¿Discapacidad?']
+];
+
+async function abrirCorregir(){
+  if(!CASO) return;
+  const caja=document.getElementById('cajaCorregir');
+  caja.innerHTML='<p class="limite" style="margin-top:12px">Cargando…</p>';
+  try{
+    const est=await pedir({accion:'estadoCaso',codigo:CASO.codigo,profesional:PROF});
+    caja.innerHTML =
+        '<div class="corregir">'
+      + '<p class="corr-tit">Corregir datos de este caso</p>'
+      + '<div class="campo" style="margin-top:10px">'
+      +   '<label for="corrCampo">Qué corregir</label>'
+      +   '<select id="corrCampo" onchange="document.getElementById(\'corrValor\').value=\'\'">'
+      +     CAMPOS.map(c=>'<option value="'+c[0]+'">'+c[1]+'</option>').join('')
+      +   '</select>'
+      + '</div>'
+      + '<div class="campo">'
+      +   '<label for="corrValor">Valor correcto</label>'
+      +   '<input id="corrValor" placeholder="Escríbelo tal como debe quedar">'
+      + '</div>'
+      + '<button class="btn btn-enviar" onclick="guardarCorreccion()">Guardar la corrección</button>'
+      + '<p class="limite">Se corrige en todas las hojas a la vez y queda registrado '
+      +   'quién lo cambió y cuándo.</p>'
+      + '<div id="cajaFechas"></div>'
+      + bloqueRectificar()
+      + bloqueBorrar(est)
+      + '<div id="corrSalida"></div>'
+      + '</div>';
+    cargarFechas();
+  }catch(e){
+    caja.innerHTML='<div class="aviso error">'+esc(e.message)+'</div>';
+  }
+}
+
+function bloqueBorrar(est){
+  if(est.borrable){
+    const n=parseInt(CASO.numero,10);
+    return '<div class="borrar-caja">'
+      + '<p class="corr-tit" style="color:var(--senal)">Eliminar este caso</p>'
+      + '<p class="limite">Este caso está vacío: no tiene sesiones dictadas ni Warwick. '
+      +   'Se puede borrar si se creó por error o quedó duplicado. '
+      +   '<b>No se puede deshacer.</b></p>'
+      + '<div class="campo" style="margin-top:9px">'
+      +   '<label for="corrConf">Escribe el número del caso para confirmar: '+n+'</label>'
+      +   '<input id="corrConf" inputmode="numeric" placeholder="'+n+'">'
+      + '</div>'
+      + '<button class="btn btn-borrar" onclick="borrarEsteCaso()">Eliminar el caso</button>'
+      + '</div>';
+  }
+  return '<div class="borrar-caja bloqueado">'
+    + '<p class="corr-tit">No se puede eliminar</p>'
+    + '<p class="limite">'+esc(est.motivo)+' Si de verdad hay que borrarlo, pídelo al '
+    + 'responsable del sistema: puede revisarlo antes de que se pierda.</p></div>';
+}
+
+async function guardarCorreccion(){
+  const campo=val('corrCampo'), valor=val('corrValor');
+  const salida=document.getElementById('corrSalida');
+  if(!valor){ salida.innerHTML='<div class="aviso neutro">Escribe el valor correcto.</div>'; return; }
+  salida.innerHTML='<div class="aviso neutro">Corrigiendo…</div>';
+  try{
+    const d=await pedir({accion:'corregirDato',profesional:PROF,codigo:CASO.codigo,
+                         nombre:CASO.nombre,campo:campo,valor:valor});
+    salida.innerHTML='<div class="aviso ok"><b>Corregido</b>'
+      + (d.anterior?'Antes: '+esc(d.anterior)+'<br>':'')
+      + 'Ahora: '+esc(d.nuevo)+'<br>'
+      + d.cambiadas+' fila(s) actualizadas.</div>';
+    if(campo==='nombre') CASO.nombre=valor;
+    setTimeout(buscarCasos, 800);
+  }catch(e){
+    salida.innerHTML='<div class="aviso error"><b>No se pudo corregir</b>'+esc(e.message)+'</div>';
+  }
+}
+
+async function borrarEsteCaso(){
+  const salida=document.getElementById('corrSalida');
+  salida.innerHTML='<div class="aviso neutro">Eliminando…</div>';
+  try{
+    const d=await pedir({accion:'borrarCaso',profesional:PROF,codigo:CASO.codigo,
+                         confirmacion:val('corrConf')});
+    salida.innerHTML='<div class="aviso ok"><b>Caso eliminado</b>'+esc(d.mensaje)+'</div>';
+    setTimeout(()=>{ soltarCaso(); buscarCasos(); }, 1500);
+  }catch(e){
+    salida.innerHTML='<div class="aviso error"><b>No se eliminó</b>'+esc(e.message)+'</div>';
+  }
+}
+
+
+// ---------------------------------------------------------- fechas
+async function cargarFechas(){
+  const caja=document.getElementById('cajaFechas');
+  if(!caja || !CASO) return;
+  try{
+    const d=await pedir({accion:'fechasCaso',profesional:PROF,
+                         codigo:CASO.codigo,nombre:CASO.nombre});
+    if(!d.sesiones.length && !d.tests.length){ caja.innerHTML=''; return; }
+
+    let html='<div class="fechas-caja"><p class="corr-tit">Fechas registradas</p>'
+      +'<p class="limite">El sistema las lee del papel y a veces se equivoca. '
+      +'Corrige la que esté mal.</p>';
+
+    d.sesiones.forEach(function(s){
+      html+='<div class="fila-fecha">'
+        +'<span class="ff-nom">Sesión '+s.sesion+'</span>'
+        +'<input type="date" value="'+esc(s.fecha)+'" '
+        +  'onchange="guardarFecha(\'sesion\','+s.fila+',this.value)">'
+        +'</div>';
+    });
+    d.tests.forEach(function(t){
+      html+='<div class="fila-fecha">'
+        +'<span class="ff-nom">Warwick '+(t.momento==='post'?'final':'inicial')
+        +  (t.bruto?' <span class="ff-pts">'+t.bruto+'/35</span>':'')+'</span>'
+        +'<input type="date" value="'+esc(t.fecha)+'" '
+        +  'onchange="guardarFecha(\'test\','+t.fila+',this.value)">'
+        +'</div>';
+    });
+    html+='<div id="fechaSalida"></div></div>';
+    caja.innerHTML=html;
+  }catch(e){ caja.innerHTML=''; }
+}
+
+async function guardarFecha(donde,fila,valor){
+  const salida=document.getElementById('fechaSalida');
+  if(!valor){ salida.innerHTML='<div class="aviso neutro">Pon una fecha.</div>'; return; }
+  salida.innerHTML='<div class="aviso neutro">Guardando…</div>';
+  try{
+    const d=await pedir({accion:'corregirFecha',profesional:PROF,codigo:CASO.codigo,
+                         donde:donde,fila:fila,fecha:valor,quien:CASO.nombre});
+    salida.innerHTML='<div class="aviso ok"><b>Fecha corregida</b>'
+      +'Antes: '+esc(d.antes)+'<br>Ahora: '+esc(d.ahora)+'</div>';
+    setTimeout(function(){ salida.innerHTML=''; }, 3000);
+  }catch(e){
+    salida.innerHTML='<div class="aviso error"><b>No se pudo</b>'+esc(e.message)+'</div>';
+    cargarFechas();
+  }
+}
+
+
+// ---------------------------------------------------------- rectificar
+function bloqueRectificar(){
+  return '<div class="rect-caja">'
+    + '<p class="corr-tit">Corregir o ampliar el informe</p>'
+    + '<p class="limite">Dile qué está mal o qué le falta. Sirve para las dos cosas: '
+    +   'quitar algo que no ocurrió, corregir un dato, o agregar y desarrollar lo que '
+    +   'no quedó recogido.</p>'
+    + '<div class="rect-ej">'
+    +   '<b>Por ejemplo</b>'
+    +   '<span>«No apliqué el WHOQOL, quítalo del informe»</span>'
+    +   '<span>«La edad está mal, tiene 34 no 43»</span>'
+    +   '<span>«Agrega que en la sesión 2 se trabajó regulación emocional con técnicas '
+    +     'de respiración, y que la paciente respondió bien»</span>'
+    +   '<span>«Desarrolla más la impresión diagnóstica»</span>'
+    + '</div>'
+    + '<div class="rect-reloj" id="rectReloj" hidden>00:00</div>'
+    + '<button class="btn btn-suave" id="btnRect" onclick="alternarRect()">'
+    +   'Dictarlo</button>'
+    + '<p class="limite" style="text-align:center">o escríbela</p>'
+    + '<textarea id="rectTexto" rows="4" placeholder="Escribe qué corregir o qué '
+    +   'agregar al informe"></textarea>'
+    + '<button class="btn btn-enviar" onclick="enviarRect()">Aplicar al informe</button>'
+    + '<div class="cargando" id="rectCargando"></div>'
+    + '<div id="rectSalida"></div>'
+    + '</div>';
+}
+
+let rectGrab=false, rectCtx, rectFuente, rectProc, rectPista, rectTrozos=[],
+    rectHz=48000, rectT0, rectCrono, rectBlob=null;
+
+async function alternarRect(){
+  const btn=document.getElementById('btnRect');
+  if(rectGrab){
+    rectGrab=false;
+    clearInterval(rectCrono);
+    try{ rectProc.disconnect(); rectFuente.disconnect(); rectPista.getTracks().forEach(t=>t.stop()); }catch(e){}
+    let tot=0; rectTrozos.forEach(t=>tot+=t.length);
+    const m=new Int16Array(tot); let k=0;
+    rectTrozos.forEach(t=>{ m.set(t,k); k+=t.length; });
+    rectTrozos=[];
+    rectBlob=aWav16(m, HZ);
+    document.getElementById('rectReloj').hidden=true;
+    btn.textContent='Volver a dictar';
+    document.getElementById('rectSalida').innerHTML=
+      '<div class="aviso ok">Grabado. Toca "Corregir el informe".</div>';
+    return;
+  }
+  try{
+    rectPista=await navigator.mediaDevices.getUserMedia({audio:{channelCount:1,
+      echoCancellation:true,noiseSuppression:true}});
+    rectCtx=new (window.AudioContext||window.webkitAudioContext)();
+    rectHz=rectCtx.sampleRate;
+    rectFuente=rectCtx.createMediaStreamSource(rectPista);
+    rectProc=rectCtx.createScriptProcessor(4096,1,1);
+    rectTrozos=[];
+    const rectRem = nuevoRemuestreador(rectHz, HZ);
+    rectProc.onaudioprocess=e=>{
+      if(!rectGrab) return;
+      rectTrozos.push(aEnteros(rectRem(e.inputBuffer.getChannelData(0))));
+    };
+    rectFuente.connect(rectProc); rectProc.connect(rectCtx.destination);
+    rectGrab=true; rectT0=Date.now();
+    document.getElementById('rectReloj').hidden=false;
+    btn.textContent='Detener';
+    rectCrono=setInterval(()=>{
+      const s=Math.floor((Date.now()-rectT0)/1000);
+      document.getElementById('rectReloj').textContent=
+        String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0');
+      if(s>=120) alternarRect();
+    },250);
+  }catch(e){
+    document.getElementById('rectSalida').innerHTML=
+      '<div class="aviso error">No se pudo usar el micrófono. Escribe la corrección.</div>';
+  }
+}
+
+async function enviarRect(){
+  const texto=val('rectTexto');
+  if(!rectBlob && !texto){
+    document.getElementById('rectSalida').innerHTML=
+      '<div class="aviso neutro">Dicta o escribe qué hay que corregir.</div>';
+    return;
+  }
+  const cg=document.getElementById('rectCargando');
+  cg.classList.add('on'); cg.textContent='Corrigiendo el informe…';
+  document.getElementById('rectSalida').innerHTML='';
+  try{
+    const cuerpo=new URLSearchParams();
+    cuerpo.append('accion','rectificar');
+    cuerpo.append('profesional',PROF);
+    cuerpo.append('codigo',CASO.codigo);
+    cuerpo.append('nombre',CASO.nombre||'');
+    if(texto) cuerpo.append('texto',texto);
+    if(rectBlob){
+      cuerpo.append('audio',await aBase64(rectBlob));
+      cuerpo.append('audioMime','audio/wav');
+    }
+    // Un audio grande puede tardar minutos en una conexión de campo. Sin
+    // límite, el botón se queda girando para siempre y no se sabe qué pasó.
+    const corte = new AbortController();
+    // El servidor se rinde solo a los 4.5 minutos y devuelve un mensaje útil.
+    // Este corte es la red de seguridad por si ni eso llega: va después, no antes.
+    const reloj = setTimeout(()=>corte.abort(), 420000);   // 7 minutos
+    let r;
+    try{
+      r = await fetch(URL_BACKEND,{method:'POST',body:cuerpo,signal:corte.signal});
+    }catch(err){
+      clearTimeout(reloj);
+      if(err.name==='AbortError')
+        throw new Error('El envío se detuvo sin respuesta del servidor. '
+          + 'Antes de repetirlo, busca a la persona en "Continuar": si la sesión '
+          + 'ya aparece, se guardó y no hace falta enviarla otra vez. '
+          + 'Si no aparece, el audio sigue grabado: vuelve a enviarlo en un par '
+          + 'de minutos o desde un lugar con mejor señal.');
+      throw err;
+    }
+    clearTimeout(reloj);
+    const d=await leerRespuesta(r);
+    cg.classList.remove('on');
+    if(!d.exito) throw new Error(d.error||'error');
+
+    const etq={quitar:'quitado',corregir:'corregido',agregar:'agregado',ampliar:'ampliado'};
+    document.getElementById('rectSalida').innerHTML=
+        '<div class="aviso ok"><b>Informe actualizado</b>'
+      + (d.resumen?esc(d.resumen)+'<br><br>':'')
+      + (d.cambios||[]).map(c=>
+            '<b>'+esc(c.que)+'</b>'
+          + (c.tipo?' <span class="rect-tipo">'+esc(etq[c.tipo]||c.tipo)+'</span>':'')
+          + (c.antes?'<br>antes: '+esc(c.antes):'')
+          + (c.despues?'<br>ahora: '+esc(c.despues):'')).join('<br><br>')
+      + (d.documento?'<p style="margin-top:10px"><a href="'+esc(d.documento)
+          +'" target="_blank" rel="noopener">Abrir el documento corregido</a></p>':'')
+      + '</div>';
+    rectBlob=null;
+    document.getElementById('rectTexto').value='';
+  }catch(e){
+    cg.classList.remove('on');
+    document.getElementById('rectSalida').innerHTML=
+      '<div class="aviso error"><b>No se pudo corregir</b>'+esc(e.message)+'</div>';
+  }
+}
+
+// ------------------------------------------------------------- lugar
+function lugarDebounce(){
+  LUGAR=null; pintarCodigo();
+  clearTimeout(temporizadorLugar);
+  temporizadorLugar=setTimeout(resolverLugar,450);
+}
+
+async function resolverLugar(){
+  const txt=val('lugar');
+  const est=document.getElementById('estadoLugar');
+  if(!txt){ est.textContent=''; LUGAR=null; pintarCodigo(); return; }
+  est.textContent='Buscando…';
+  try{
+    const d=await pedir({accion:'lugarResolver',texto:txt,localidad:LOC});
+    if(d.encontrado){
+      LUGAR={sigla:d.sigla,nombre:d.nombre};
+      est.innerHTML='<b style="color:var(--oliva)">'+esc(d.sigla)+'</b> · '+esc(d.nombre)
+        +(d.exacto?'':' <span style="color:var(--apagado)">(por parecido)</span>');
+    }else{
+      LUGAR=null;
+      est.innerHTML='Lugar nuevo. Sigla propuesta: <b>'+esc(d.propuesta)+'</b> '
+        +'<button class="btn-mini" onclick="registrarLugar(\''+esc(d.propuesta)+'\')">Usar</button> '
+        +'<button class="btn-mini" onclick="otraSigla()">Otra</button>';
+    }
+  }catch(e){ est.textContent='No se pudo consultar el catálogo'; }
+  pintarCodigo();
+}
+
+async function registrarLugar(sigla){
+  try{
+    const d=await pedir({accion:'lugarRegistrar',localidad:LOC,sigla:sigla,
+                         nombre:val('lugar'),profesional:PROF});
+    LUGAR={sigla:d.sigla,nombre:d.nombre};
+    document.getElementById('estadoLugar').innerHTML=
+      '<b style="color:var(--oliva)">'+esc(d.sigla)+'</b> · '+esc(d.nombre)
+      +(d.yaExistia?'':' · agregado al catálogo');
+    cargarLugares();
+  }catch(e){
+    document.getElementById('estadoLugar').innerHTML=
+      '<span style="color:var(--senal)">'+esc(e.message)+'</span> '
+      +'<button class="btn-mini" onclick="otraSigla()">Elegir otra</button>';
+  }
+  pintarCodigo();
+}
+
+function otraSigla(){
+  const s=prompt('Sigla para "'+val('lugar')+'" (2 a 5 letras o números):','');
+  if(s && s.trim()) registrarLugar(s.trim().toUpperCase());
+}
+
+async function cargarLugares(){
+  try{
+    const d=await pedir({accion:'lugarListar',localidad:LOC});
+    document.getElementById('lugares').innerHTML=
+      d.lugares.map(l=>'<option value="'+esc(l.nombre)+'">'+esc(l.sigla)+'</option>').join('');
+  }catch(e){}
+}
+
+// ------------------------------------------------------------- código
+// El año va fijo, no del reloj del celular: si alguien lo tiene mal, el
+// código saldría con otro año y ese caso quedaría fuera del reporte.
+const ANIO_PROYECTO = '2026';
+
+function armarCodigo(){
+  // si se está continuando un caso, el código ya lo tenemos
+  if(ENTRADA==='seguir') return CASO ? CASO.codigo : null;
+  const n=val('num');
+  if(!LUGAR || !n) return null;
+
+  const partes=[LOC];
+  if(LOC==='MB'){
+    const c=val('canton');
+    if(!c) return null;
+    partes.push(c);
+  }
+  partes.push(LUGAR.sigla);
+
+  // Formato vigente: el tipo delante y el resto con guion bajo.
+  //   K-COL-2025-9005-R1A6-TI_MB_MT_TQ_026_2026
+  return 'K-COL-2025-9005-R1A6-'+modo+'_'+partes.join('_')
+       + '_'+String(n).padStart(3,'0')+'_'+ANIO_PROYECTO;
+}
+
+function pintarCodigo(){
+  const c=armarCodigo(), el=document.getElementById('codigo');
+  if(c){ el.textContent=c; el.classList.add('listo'); }
+  else if(ENTRADA==='seguir'){
+    el.textContent='Elige a la persona arriba';
+    el.classList.remove('listo');
+  }
+  else{
+    el.textContent = !LUGAR ? 'Escribe el lugar de intervención'
+      : (LOC==='MB' && !val('canton')) ? 'Falta el cantón'
+      : 'Falta el número de '+(modo==='TG'?'grupo':'paciente');
+    el.classList.remove('listo');
+  }
+  revisarEnvio();
+}
+
+let ESTADO_NUM=null;
+
+async function sugerirNumero(){
+  try{
+    const d=await pedir({accion:'lugarSiguienteNumero',localidad:LOC,tipo:modo,
+                         numero:val('num')||0});
+    ESTADO_NUM=d;
+    const el=document.getElementById('num');
+    if(!el.value){ el.placeholder=String(d.siguiente); el.value=String(d.siguiente); }
+    pintarEstadoNum();
+    pintarCodigo();
+  }catch(e){}
+}
+
+function pintarEstadoNum(){
+  const caja=document.getElementById('estadoNum');
+  if(!caja || !ESTADO_NUM) return;
+  const d=ESTADO_NUM, n=parseInt(val('num'),10)||0;
+  const que = modo==='TG' ? 'grupo' : 'paciente';
+
+  if(n && d.ocupado===true && n===d.consultado){
+    caja.innerHTML='<span class="num-mal">El '+que+' '+n+' ya existe en esta localidad. '
+      +'El siguiente libre es el <b>'+d.siguiente+'</b> '
+      +'<button class="btn-mini" onclick="tomarNumero('+d.siguiente+')">Usarlo</button></span>';
+    return;
+  }
+  let t='<span class="num-ok">'+d.usados+' '+(modo==='TG'?'grupo(s)':'paciente(s)')
+      +' registrados · el siguiente es el '+d.siguiente+'</span>';
+  if(d.hay_huecos)
+    t+='<br><span class="num-hueco">Números sin usar: '
+      + d.huecos.map(x=>'<button class="btn-mini" onclick="tomarNumero('+x+')">'+x+'</button>').join(' ')
+      + (d.hay_huecos>d.huecos.length?' y '+(d.hay_huecos-d.huecos.length)+' más':'')
+      + '</span>';
+  caja.innerHTML=t;
+}
+
+function tomarNumero(n){
+  document.getElementById('num').value=n;
+  revisarNumero();
+}
+
+let tNum=null;
+function revisarNumero(){
+  pintarCodigo();
+  clearTimeout(tNum);
+  tNum=setTimeout(sugerirNumero, 400);
+}
+
+// Acciones que solo leen datos. Se reintentan solas si Google tropieza,
+// porque repetirlas no cambia nada. Las que guardan NO se reintentan: si la
+// primera sí llegó, repetirla podría duplicar la información.
+const SOLO_LECTURA = ['buscar','ficha','grilla','grupos','reporte','items','escala',
+  'margen','hojasBlanco','sinDueno','casosAbiertos','estadoCaso','fechasCaso',
+  'verParticipante','lugarListar','lugarSiguienteNumero','agendaListar',
+  'agendaDia','agendaHuecos','firma'];
+
+const dormirMs = ms => new Promise(r => setTimeout(r, ms));
+
+/**
+ * Habla con el servidor.
+ *
+ * Apps Script a veces devuelve una página de error en vez de datos: un
+ * tropiezo pasajero de Google, más frecuente tras un rato sin uso. Antes eso
+ * llegaba a la pantalla como "Unexpected token '<'". Ahora se detecta, y si la
+ * acción solo lee, se reintenta sola con una pequeña espera.
+ */
+
+/**
+ * Lee la respuesta del servidor reconociendo la página de error de Google.
+ * Se usa en los envíos grandes, que no pasan por pedir(). No reintenta:
+ * son escrituras, y repetirlas podría duplicar la sesión.
+ */
+async function leerRespuesta(r){
+  const txt = await r.text();
+  if(txt.trim().charAt(0) === '<')
+    throw new Error('El servidor de Google tuvo un tropiezo y no se sabe si guardó. '
+      + 'Antes de volver a enviar, busca a la persona en "Continuar": si la sesión '
+      + 'ya aparece, se guardó bien y no hace falta repetirla.');
+  return JSON.parse(txt);
+}
+
+async function pedir(datos){
+  if(URL_BACKEND.indexOf('PEGA_AQUI')===0)
+    throw new Error('Falta la dirección del servidor en este archivo.');
+  const lectura = SOLO_LECTURA.indexOf(datos.accion) !== -1;
+  const intentos = lectura ? 3 : 1;
+  let ultimo = null;
+
+  for(let i=0; i<intentos; i++){
+    if(i > 0) await dormirMs(1200 * i);     // 1.2 s, luego 2.4 s
+    try{
+      const r = await fetch(URL_BACKEND,{method:'POST',body:new URLSearchParams(datos)});
+      const txt = await r.text();
+
+      // ¿vino una página de error en vez de datos?
+      if(txt.trim().charAt(0) === '<'){
+        ultimo = new Error('TROPIEZO');
+        continue;
+      }
+      const d = JSON.parse(txt);
+      if(!d.exito) throw new Error(d.error||'error sin detalle');
+      return d;
+    }catch(e){
+      // un error de la aplicación (datos inválidos, etc.) no se reintenta
+      if(e.message !== 'TROPIEZO' && !/Failed to fetch|NetworkError/i.test(e.message))
+        throw e;
+      ultimo = e;
+    }
+  }
+
+  // se agotaron los intentos
+  if(lectura)
+    throw new Error('El servidor de Google no respondió bien, ni reintentando. '
+      + 'Espera unos segundos y vuelve a intentarlo.');
+  throw new Error('El servidor de Google tuvo un tropiezo y no se sabe si guardó. '
+    + 'Antes de volver a enviar, revisa si la información ya aparece: '
+    + 'así evitas duplicarla.');
+}
+
+// ------------------------------------------------------------- grabar
+async function alternar(){ grabando?detener():await empezar(); }
+
+async function empezar(){
+  try{
+    pista=await navigator.mediaDevices.getUserMedia({
+      audio:{channelCount:1,echoCancellation:true,noiseSuppression:true,autoGainControl:true}});
+  }catch(e){
+    return decir('error','No pude usar el micrófono',
+      'Dale permiso al navegador: candado junto a la dirección → Permisos → Micrófono.');
+  }
+  ctx=new (window.AudioContext||window.webkitAudioContext)();
+  if(ctx.state==='suspended') await ctx.resume();
+  hzOrigen=ctx.sampleRate;
+  fuente=ctx.createMediaStreamSource(pista);
+  proc=ctx.createScriptProcessor(4096,1,1);
+  const mudo=ctx.createGain(); mudo.gain.value=0;
+  trozos=[];
+  // Se remuestrea EN EL MOMENTO, no al final. Guardar el audio en crudo a
+  // 48 kHz llenaba la memoria del celular —17 MB al minuto y medio— y el
+  // navegador mataba la pestaña: la grabación se cortaba sola y al enviar la
+  // página se recargaba como si nada hubiera pasado.
+  const remuestreador = nuevoRemuestreador(hzOrigen, HZ);
+  proc.onaudioprocess=e=>{
+    if(!grabando) return;
+    trozos.push(aEnteros(remuestreador(e.inputBuffer.getChannelData(0))));
+  };
+  fuente.connect(proc); proc.connect(mudo); mudo.connect(ctx.destination);
+
+  grabando=true; t0=Date.now();
+  document.body.classList.add('grabando');
+  document.getElementById('btnGrabar').classList.add('parar');
+  document.getElementById('txtGrabar').textContent='Detener';
+  document.getElementById('tiempo').classList.add('activo');
+  document.getElementById('cajaAudio').hidden=true;
+  document.getElementById('salida').innerHTML='';
+  cronometro=setInterval(tick,250);
+}
+
+function tick(){
+  const s=Math.floor((Date.now()-t0)/1000);
+  document.getElementById('tiempo').textContent=
+    String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0');
+  const barra=document.getElementById('presupuesto');
+  barra.style.width=Math.min(100,(s/MAX_SEG)*100)+'%';
+  barra.classList.toggle('alto',s>MAX_SEG*0.85);
+  if(s>=MAX_SEG) detener();
+}
+
+function detener(){
+  if(!grabando) return;
+  grabando=false; clearInterval(cronometro);
+  try{ proc.disconnect(); fuente.disconnect(); }catch(e){}
+  pista.getTracks().forEach(t=>t.stop());
+  ctx.close();
+  document.body.classList.remove('grabando');
+  document.getElementById('btnGrabar').classList.remove('parar');
+  document.getElementById('txtGrabar').textContent='Grabar sesión';
+  document.getElementById('tiempo').classList.remove('activo');
+
+  // los trozos ya vienen remuestreados y en enteros: solo hay que unirlos
+  let total=0; trozos.forEach(t=>total+=t.length);
+  const muestras=new Int16Array(total); let o=0;
+  trozos.forEach(t=>{muestras.set(t,o); o+=t.length;});
+  trozos=[];                                  // liberar la memoria enseguida
+  wavBlob=aWav16(muestras,HZ);
+
+  document.getElementById('reproductor').src=URL.createObjectURL(wavBlob);
+  document.getElementById('cajaAudio').hidden=false;
+  const mb = wavBlob.size/1048576;
+  const seg = Math.round(muestras.length / HZ);   // la duración sale del audio
+  decir(mb > 9 ? 'neutro' : 'ok', 'Audio listo',
+    mb.toFixed(1) + ' MB · ' + seg + ' segundos'
+    + (mb > 9 ? '<br><br>Es un audio largo y puede fallar al enviarlo desde el '
+              + 'celular. Si no sube, graba la sesión en dos partes.' : ''));
+  revisarEnvio();
+}
+
+/** De Float32 a enteros de 16 bits: ocupa la mitad y es lo que pide el WAV. */
+function aEnteros(f){
+  const out=new Int16Array(f.length);
+  for(let i=0;i<f.length;i++){
+    const s=Math.max(-1,Math.min(1,f[i]));
+    out[i]=s<0 ? s*0x8000 : s*0x7FFF;
+  }
+  return out;
+}
+
+/**
+ * Remuestrea manteniendo la continuidad entre bloques.
+ *
+ * El navegador entrega el audio en bloques de 4096 muestras. Remuestrear cada
+ * uno por separado dejaba un corte en cada frontera —unos doce por segundo—
+ * y el audio se volvía inservible. Aquí se recuerda en qué punto se quedó el
+ * bloque anterior y su última muestra, para que el empalme sea limpio.
+ */
+function nuevoRemuestreador(de, a){
+  const razon = de / a;
+  let posicion = 0;       // dónde íbamos dentro del bloque actual
+  let anterior = 0;       // última muestra del bloque previo
+
+  return function(bloque){
+    if(de === a){ return Float32Array.from(bloque); }
+    const salida = [];
+    let x = posicion;
+    while(x < bloque.length){
+      const i0 = Math.floor(x);
+      const f = x - i0;
+      const m0 = (i0 < 0) ? anterior : bloque[i0];
+      const m1 = (i0 + 1 < bloque.length) ? bloque[i0 + 1] : bloque[bloque.length - 1];
+      salida.push(m0 * (1 - f) + m1 * f);
+      x += razon;
+    }
+    posicion = x - bloque.length;   // el sobrante se lleva al siguiente bloque
+    anterior = bloque[bloque.length - 1];
+    return Float32Array.from(salida);
+  };
+}
+
+function remuestrear(entrada,de,a){
+  if(de===a) return entrada;
+  const razon=de/a,largo=Math.round(entrada.length/razon),salida=new Float32Array(largo);
+  for(let i=0;i<largo;i++){
+    const x=i*razon,i0=Math.floor(x),i1=Math.min(i0+1,entrada.length-1),f=x-i0;
+    salida[i]=entrada[i0]*(1-f)+entrada[i1]*f;
+  }
+  return salida;
+}
+
+/** El WAV a partir de muestras que ya son enteros de 16 bits. */
+function aWav16(m,hz){
+  const buf=new ArrayBuffer(44+m.length*2),v=new DataView(buf);
+  const txt=(p,s)=>{for(let i=0;i<s.length;i++)v.setUint8(p+i,s.charCodeAt(i));};
+  txt(0,'RIFF');v.setUint32(4,36+m.length*2,true);txt(8,'WAVE');
+  txt(12,'fmt ');v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,1,true);
+  v.setUint32(24,hz,true);v.setUint32(28,hz*2,true);v.setUint16(32,2,true);v.setUint16(34,16,true);
+  txt(36,'data');v.setUint32(40,m.length*2,true);
+  for(let i=0;i<m.length;i++) v.setInt16(44+i*2,m[i],true);
+  return new Blob([v],{type:'audio/wav'});
+}
+
+function aWav(m,hz){
+  const buf=new ArrayBuffer(44+m.length*2),v=new DataView(buf);
+  const txt=(p,s)=>{for(let i=0;i<s.length;i++)v.setUint8(p+i,s.charCodeAt(i));};
+  txt(0,'RIFF');v.setUint32(4,36+m.length*2,true);txt(8,'WAVE');
+  txt(12,'fmt ');v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,1,true);
+  v.setUint32(24,hz,true);v.setUint32(28,hz*2,true);v.setUint16(32,2,true);v.setUint16(34,16,true);
+  txt(36,'data');v.setUint32(40,m.length*2,true);
+  let p=44;
+  for(let i=0;i<m.length;i++,p+=2){
+    const s=Math.max(-1,Math.min(1,m[i]));
+    v.setInt16(p,s<0?s*0x8000:s*0x7FFF,true);
+  }
+  return new Blob([v],{type:'audio/wav'});
+}
+
+function descartar(){
+  wavBlob=null;
+  document.getElementById('reproductor').src='';
+  document.getElementById('cajaAudio').hidden=true;
+  document.getElementById('tiempo').textContent='00:00';
+  document.getElementById('presupuesto').style.width='0';
+  document.getElementById('salida').innerHTML='';
+  revisarEnvio();
+}
+
+// ------------------------------------------------------------- adjuntos
+let ADJUNTOS=[];   // {nombre, mime, b64, kb}
+
+async function agregarArchivos(input){
+  const files=[...input.files];
+  input.value='';
+  for(const f of files){
+    try{
+      const a = f.type==='application/pdf' ? await leerPdf(f) : await comprimirImagen(f);
+      ADJUNTOS.push(a);
+    }catch(e){
+      decir('error','No pude leer '+esc(f.name), esc(e.message));
+    }
+  }
+  pintarAdjuntos();
+}
+
+function comprimirImagen(f){
+  return new Promise((ok,mal)=>{
+    const img=new Image();
+    img.onload=()=>{
+      // 2000 px es suficiente para que se lea letra manuscrita
+      const max=2000, e=Math.min(1,max/Math.max(img.width,img.height));
+      const cv=document.createElement('canvas');
+      cv.width=Math.round(img.width*e); cv.height=Math.round(img.height*e);
+      const cx=cv.getContext('2d');
+      cx.fillStyle='#fff'; cx.fillRect(0,0,cv.width,cv.height);
+      cx.drawImage(img,0,0,cv.width,cv.height);
+      const b64=cv.toDataURL('image/jpeg',0.82).split(',')[1];
+      URL.revokeObjectURL(img.src);
+      ok({nombre:f.name||'foto.jpg', mime:'image/jpeg', b64:b64, kb:Math.round(b64.length/1365)});
+    };
+    img.onerror=()=>mal(new Error('no parece una imagen válida'));
+    img.src=URL.createObjectURL(f);
+  });
+}
+
+function leerPdf(f){
+  return new Promise((ok,mal)=>{
+    if(f.size>12*1048576) return mal(new Error('el PDF pesa más de 12 MB'));
+    const fr=new FileReader();
+    fr.onloadend=()=>ok({nombre:f.name, mime:'application/pdf',
+      b64:fr.result.split(',')[1], kb:Math.round(f.size/1024)});
+    fr.onerror=()=>mal(new Error('no se pudo leer'));
+    fr.readAsDataURL(f);
+  });
+}
+
+function pintarAdjuntos(){
+  const caja=document.getElementById('listaAdj');
+  caja.innerHTML=ADJUNTOS.map((a,i)=>
+    '<div class="adj"><span class="ico">'+(a.mime==='application/pdf'?'PDF':'IMG')+'</span>'
+    +'<span class="txt"><span class="nom">'+esc(a.nombre)+'</span>'
+    +'<span class="peso">'+a.kb+' KB</span></span>'
+    +'<button class="quitar" onclick="quitarAdjunto('+i+')" aria-label="Quitar">×</button></div>'
+  ).join('');
+  revisarEnvio();
+}
+
+function quitarAdjunto(i){ ADJUNTOS.splice(i,1); pintarAdjuntos(); }
+
+function pesoTotal(){
+  return ADJUNTOS.reduce((s,a)=>s+a.b64.length,0);
+}
+
+// ------------------------------------------------------------- enviar
+function revisarEnvio(){
+  // solo la sesión 1 crea el caso: en las siguientes el número ya existe
+  const sesion1 = parseInt(sesionActual(),10)===1;
+  // el número solo se comprueba al abrir un caso nuevo
+  const ocupado = ENTRADA==='nuevo' && sesion1 && ESTADO_NUM && ESTADO_NUM.ocupado
+                  && parseInt(val('num'),10)===ESTADO_NUM.consultado;
+  const primeraGrupal = modo==='TG' && sesion1;
+  const hayMaterial = !!wavBlob || ADJUNTOS.length>0;
+  const listo = !!armarCodigo() && hayMaterial && !ocupado
+              && (!primeraGrupal || ADJUNTOS.length>0);
+  const btn=document.getElementById('btnEnviar');
+  btn.disabled=!listo;
+  btn.textContent = !armarCodigo() ? 'Completa el código arriba'
+    : ocupado ? 'Ese número ya está ocupado'
+    : (ENTRADA==='seguir' && !CASO) ? 'Elige a la persona'
+    : (primeraGrupal && !ADJUNTOS.length) ? 'Falta la lista de asistencia'
+    : !hayMaterial ? 'Graba la sesión o adjunta tus notas'
+    : 'Enviar y generar documento';
+}
+
+async function enviar(rehacer){
+  // Un doble toque en pantalla táctil manda dos peticiones a la vez, y las dos
+  // llegan antes de que el servidor pueda bloquear la segunda.
+  if(ENVIANDO) return;
+  if(YA_ENVIADO && !rehacer) return;
+  ENVIANDO = true;
+
+  const codigo=armarCodigo();
+  if(!codigo || (!wavBlob && !ADJUNTOS.length)) return;
+  document.getElementById('cargando').classList.add('on');
+  document.getElementById('salida').innerHTML='';
+  document.getElementById('btnEnviar').disabled=true;
+  try{
+    const audio = wavBlob ? await aBase64(wavBlob) : '';
+    const total = audio.length + pesoTotal();
+    if(total>18000000)
+      throw new Error('Todo junto pesa demasiado ('+Math.round(total/1048576)+' MB). '
+        +'Quita algún adjunto o graba menos tiempo.');
+
+    const cuerpo=new URLSearchParams();
+    cuerpo.append('tipo',modo);
+    cuerpo.append('codigo',codigo);
+    cuerpo.append('sesion',sesionActual());
+    cuerpo.append('fecha',val('fechaSesion')||'');
+    if(rehacer) cuerpo.append('rehacer','si');
+    cuerpo.append('profesional',PROF);
+    if(audio){
+      cuerpo.append('audio',audio);
+      cuerpo.append('audioMime','audio/wav');
+    }
+    ADJUNTOS.forEach(a=>{
+      cuerpo.append('adjunto',a.b64);
+      cuerpo.append('adjuntoMime',a.mime);
+    });
+
+    // Un audio grande puede tardar minutos en una conexión de campo. Sin
+    // límite, el botón se queda girando para siempre y no se sabe qué pasó.
+    const corte = new AbortController();
+    // El servidor se rinde solo a los 4.5 minutos y devuelve un mensaje útil.
+    // Este corte es la red de seguridad por si ni eso llega: va después, no antes.
+    const reloj = setTimeout(()=>corte.abort(), 420000);   // 7 minutos
+    let r;
+    try{
+      r = await fetch(URL_BACKEND,{method:'POST',body:cuerpo,signal:corte.signal});
+    }catch(err){
+      clearTimeout(reloj);
+      if(err.name==='AbortError')
+        throw new Error('El envío se detuvo sin respuesta del servidor. '
+          + 'Antes de repetirlo, busca a la persona en "Continuar": si la sesión '
+          + 'ya aparece, se guardó y no hace falta enviarla otra vez. '
+          + 'Si no aparece, el audio sigue grabado: vuelve a enviarlo en un par '
+          + 'de minutos o desde un lugar con mejor señal.');
+      throw err;
+    }
+    clearTimeout(reloj);
+    const d=await leerRespuesta(r);
+    document.getElementById('cargando').classList.remove('on');
+
+    if(!d.exito){
+      decir('error','El servidor rechazó la sesión',esc(d.error||'sin detalle'));
+      document.getElementById('btnEnviar').disabled=false;
+      return;
+    }
+    mostrar(d);
+  }catch(e){
+    ENVIANDO = false;
+    document.getElementById('cargando').classList.remove('on');
+    // si esa sesión ya estaba guardada, ofrecer reemplazarla en vez de dejarlo
+    // en un error sin salida
+    if(/ya está registrada/.test(e.message)){
+      // Casi siempre significa que el envío anterior SÍ llegó y se perdió la
+      // respuesta. Decirlo así evita que la persona insista y duplique.
+      decir('ok','Esta sesión ya estaba guardada',
+         'Tu envío anterior sí llegó, aunque la pantalla no lo mostrara. '
+        +'No hace falta volver a enviarla.<br><br>'
+        +'<small>'+esc(e.message)+'</small>'
+        +'<br><br><button class="btn btn-suave" style="margin-top:0" '
+        +'onclick="enviar(true)">Reemplazarla con este dictado</button>');
+      cerrarEnvio();
+    } else {
+      decir('error','No se pudo enviar',esc(e.message)
+        +' · Si dice "Failed to fetch", vuelve a implementar el Apps Script con acceso "Cualquier usuario".');
+    }
+    document.getElementById('btnEnviar').disabled=false;
+  }
+}
+
+function aBase64(blob){
+  return new Promise((ok,mal)=>{
+    const fr=new FileReader();
+    fr.onloadend=()=>ok(fr.result.split(',')[1]);
+    fr.onerror=mal; fr.readAsDataURL(blob);
+  });
+}
+
+/**
+ * Deja la pantalla en estado "ya se guardó".
+ *
+ * El problema real no era estético: cuando la confirmación no se veía, la
+ * persona volvía a enviar y se duplicaba la información. Aquí se limpia el
+ * formulario, se bloquea el botón y se lleva la vista a la confirmación, para
+ * que no quede duda de que el envío llegó.
+ */
+function cerrarEnvio(){
+  YA_ENVIADO = true;
+  ENVIANDO = false;
+  wavBlob = null; ADJUNTOS = [];
+  ['obs','sesion','sesionSeguir','num'].forEach(function(id){
+    const e = document.getElementById(id); if(e) e.value = '';
+  });
+  ['cajaAudio','listaAdjuntos'].forEach(function(id){
+    const e = document.getElementById(id); if(e) e.hidden = true;
+  });
+  const b = document.getElementById('btnEnviar');
+  if(b){ b.disabled = true; b.textContent = 'Ya enviado'; }
+  document.getElementById('salida').scrollIntoView({behavior:'smooth', block:'center'});
+}
+
+/** Deja todo listo para registrar otra sesión. */
+function otraSesion(){
+  YA_ENVIADO = false;
+  ENVIANDO = false;
+  CASO = null;
+  document.getElementById('salida').innerHTML = '';
+  const s = document.getElementById('secElegido');
+  if(s) s.hidden = true;
+  const b = document.getElementById('btnEnviar');
+  if(b) b.disabled = false;
+  if(typeof buscarCasos === 'function') buscarCasos();
+  revisarEnvio();
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+
+let YA_ENVIADO = false, ENVIANDO = false;
+
+function mostrar(d){
+  // crudo=true para valores que ya llevan HTML propio (el código va en monoespaciada)
+  const fila=(k,v,crudo)=> (v||v===0)
+    ? '<dt>'+k+'</dt><dd>'+(crudo?v:esc(v))+'</dd>' : '';
+  const revisar=(d.revisar&&d.revisar.length)
+    ? '<div class="aviso error" style="margin-top:10px"><b>Revisar a mano</b>'+esc(d.revisar.join(', '))+'</div>':'';
+  // qué corresponde hacer ahora: el Warwick de la sesión 2, el cierre del proceso…
+  // avisos de coherencia: casillas que no cuadran con el relato
+  const incoh=(d.incoherencias&&d.incoherencias.length)
+    ? '<div class="aviso-coherencia"><b>Revisa el informe antes de firmarlo</b>'
+      + d.incoherencias.map(x=>'<span>'+esc(x)+'</span>').join('')
+      + '<p>Si algo está mal, corrígelo con «Corregir o ampliar el informe».</p></div>' : '';
+  const recordar=(d.recordatorio&&d.recordatorio.length)
+    ? '<div class="recordatorio"><b>Qué toca ahora</b>'
+      + d.recordatorio.map(x=>'<span>'+esc(x)+'</span>').join('') + '</div>' : '';
+  const nota=d.nota?'<div class="aviso neutro" style="margin-top:10px">'+esc(d.nota)+'</div>':'';
+  document.getElementById('salida').innerHTML=
+    '<div class="aviso ok resultado"><b>'
+    + (d.tipo==='TG'?'Informe grupal generado':'Ficha Integrada generada')+'</b><dl>'
+    + fila('Código','<span style="font-family:var(--mono);font-size:11px">'
+        +esc(d.codigo)+'</span>', true)
+    + fila('Sesión',d.sesion)
+    + fila(d.tipo==='TG'?'Grupo':'Paciente', d.tipo==='TG'?d.grupo:d.nombre)
+    + fila('Participantes',d.participantes)
+    + fila('Tema',d.tema)
+    + fila('Edad',d.edad)
+    + fila('Riesgo',d.riesgo)
+    + fila('Warwick',d.warwick)
+    + fila('Próxima cita',d.cita)
+    + fila('Trazabilidad',d.trazabilidad)
+    + '</dl><p style="margin-top:10px"><a href="'+esc(d.documento)+'" target="_blank" rel="noopener">'
+    + 'Abrir documento</a></p></div>' + nota
+    + incoh
+    + recordar
+    + revisar
+    + '<div class="tras-envio">'
+    +   '<button class="btn btn-enviar" onclick="otraSesion()">Registrar otra sesión</button>'
+    +   '<a class="btn btn-suave" href="index.html" style="display:block;'
+    +     'text-align:center;text-decoration:none;line-height:1.4">Volver al inicio</a>'
+    + '</div>';
+  cerrarEnvio();
+}
+
+async function probarConexion(){
+  try{
+    if(URL_BACKEND.indexOf('PEGA_AQUI')===0) throw new Error('Falta la dirección del servidor.');
+    const r=await fetch(URL_BACKEND); const d=await leerRespuesta(r);
+    decir('ok','Servidor conectado','Modelo en uso: '+esc(d.modelo));
+  }catch(e){
+    decir('error','No hay conexión con el servidor',
+      'Vuelve a implementar el Apps Script: Implementar → Administrar implementaciones → '
+      +'lápiz → Versión nueva → acceso "Cualquier usuario".');
+  }
+}
+
+function decir(clase,titulo,texto){
+  document.getElementById('salida').innerHTML=
+    '<div class="aviso '+clase+'"><b>'+titulo+'</b>'+texto+'</div>';
+}
+
+fijarProfesional();
+
+// cantones solo en Manabí
+(function(){
+  const caja=document.getElementById('cajaCanton');
+  const sel=document.getElementById('canton');
+  if(LOC==='MB'){
+    caja.hidden=false;
+    sel.innerHTML='<option value="">—</option>'
+      + CANTONES_MB.map(([v,t])=>'<option value="'+v+'">'+t+'</option>').join('');
+  } else caja.hidden=true;
+})();
+
+document.getElementById('sesion').addEventListener('input',function(){
+  revisarEnvio(); sugerirNumero(); });
+document.getElementById('explica').textContent=TEXTOS.TI;
+document.getElementById('ayudaAdj').textContent=AYUDA_ADJ.TI;
+cargarLugares();
+(function(){ const f=document.getElementById('fechaSesion');
+  if(f) f.value=new Date().toISOString().slice(0,10); })();
+document.getElementById('secNuevo').hidden = true;
+buscarCasos();
+revisarEnvio();
+</script>
+</body>
+</html>
